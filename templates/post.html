@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ post.title[:60] }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="shell">
+
+  <header class="topbar">
+    <div>
+      <h1>{{ post.title[:80] }}</h1>
+      <p class="sub">r/{{ post.subreddit }} &middot; u/{{ post.author }} &middot; {{ post.created_utc | ago }} old &middot; score {{ post.score }}</p>
+    </div>
+    <div class="topbar-actions">
+      <a class="btn ghost" href="{{ url_for('index') }}">&#8592; back</a>
+      <a class="btn ghost" href="{{ post.permalink }}" target="_blank" rel="noopener">open on reddit</a>
+    </div>
+  </header>
+
+  {% if post.blacklisted %}
+  <div class="banner bad">Blacklisted. Our comments here keep vanishing; stop posting to this thread.</div>
+  {% endif %}
+  {% if has_marker %}
+  <div class="banner marker">&#127819; A comment in this thread carries your marker.</div>
+  {% endif %}
+
+  {% if post.body %}
+  <section class="panel prose">{{ post.body }}</section>
+  {% endif %}
+
+  <section class="panel">
+    <h2>Thread &mdash; {{ comments | length }} comments</h2>
+    {% for c in comments %}
+    <article class="comment {{ 'gone' if c.deleted else '' }}">
+      <div class="comment-head">
+        <span class="who">u/{{ c.author }}</span>
+        {% if c.is_ours %}<span class="badge good">OURS</span>{% endif %}
+        {% if c.mentions_marker %}<span class="badge marker">MARKER</span>{% endif %}
+        {% if c.deleted %}<span class="badge bad">DELETED</span>{% endif %}
+        <span class="dim tiny">{{ c.created_utc | ts }} &middot; {{ c.score }} pts</span>
+      </div>
+      <div class="comment-body">{{ c.body }}</div>
+      {% if c.deleted %}
+      <div class="comment-foot mono tiny">gone by {{ c.deleted_at | ts }} &middot; inferred: {{ c.delete_reason }}</div>
+      {% endif %}
+    </article>
+    {% else %}
+    <p class="empty">No comments stored. Refresh from the dashboard.</p>
+    {% endfor %}
+  </section>
+
+  <section class="panel">
+    <button class="btn" id="gen" {{ 'disabled' if not can_generate else '' }}>generate comment</button>
+    <span class="dim tiny">{{ 'ready' if can_generate else 'disabled until the comment formula lands' }}</span>
+    <pre id="out" class="draft" hidden></pre>
+  </section>
+
+</div>
+<script>
+var gen = document.getElementById('gen');
+if (gen && !gen.disabled) {
+  gen.addEventListener('click', function () {
+    gen.textContent = 'thinking...';
+    fetch('/post/{{ post.id }}/generate', { method: 'POST' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var out = document.getElementById('out');
+        out.hidden = false;
+        out.textContent = d.text || d.error;
+        gen.textContent = 'generate comment';
+      });
+  });
+}
+</script>
+</body>
+</html>

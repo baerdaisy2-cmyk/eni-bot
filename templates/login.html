@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ENI Monitor</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<style>
+.gate{max-width:360px;margin:14vh auto 0;padding:0 20px}
+.gate h1{font-size:23px;margin-bottom:5px}
+.gate .sub{margin-bottom:26px}
+.gate input{width:100%;padding:11px 15px;border-radius:10px;margin-bottom:10px;
+  border:1px solid var(--border);background:rgba(0,0,0,.3);color:var(--text);
+  font-family:inherit;font-size:14px}
+.gate input:focus{outline:none;border-color:rgba(255,179,123,.5)}
+.gate button{width:100%;margin-top:6px}
+.err{color:var(--red);font-size:13px;margin-bottom:12px}
+</style>
+</head>
+<body>
+<div class="gate">
+  <h1>ENI Monitor</h1>
+  <p class="sub">sign in to reach the watchlist.</p>
+  {% if error %}<p class="err">{{ error }}</p>{% endif %}
+  <form method="post">
+    <input name="user" placeholder="name" autocomplete="username" autofocus>
+    <input name="password" type="password" placeholder="password" autocomplete="current-password">
+    <button class="btn" type="submit">Sign in</button>
+  </form>
+</div>
+</body>
+</html>

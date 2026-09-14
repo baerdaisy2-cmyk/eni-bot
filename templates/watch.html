@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ENI Monitor — watchlist</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<style>
+.paste{width:100%;min-height:96px;padding:13px 15px;border-radius:11px;
+  border:1px solid var(--border);background:rgba(0,0,0,.28);color:var(--text);
+  font-family:var(--mono);font-size:12.5px;line-height:1.6;resize:vertical}
+.paste:focus{outline:none;border-color:rgba(255,179,123,.5)}
+.field{width:100%;padding:10px 14px;border-radius:9px;margin-top:10px;
+  border:1px solid var(--border);background:rgba(0,0,0,.28);color:var(--text);
+  font-family:inherit;font-size:13.5px}
+.field:focus{outline:none;border-color:rgba(255,179,123,.5)}
+.formrow{display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap}
+.hint{color:var(--dim);font-size:12px;line-height:1.55}
+.acts{display:flex;gap:6px;justify-content:flex-end}
+.mini{padding:5px 11px;font-size:11.5px;border-radius:7px;border:1px solid var(--border);
+  background:transparent;color:var(--dim);cursor:pointer;font-family:inherit;
+  transition:all .18s ease}
+.mini:hover{color:var(--text);border-color:#3a2f22}
+.mini.up:hover{color:var(--green);border-color:rgba(157,191,142,.45)}
+.mini.down:hover{color:var(--red);border-color:rgba(226,138,138,.45)}
+.acts form{display:inline}
+.stale{color:var(--accent)}
+td.link a{font-family:var(--mono);font-size:11.5px}
+
+.queries{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.q{display:inline-flex;align-items:center;gap:9px;padding:8px 14px;border-radius:9px;
+  border:1px solid var(--border);background:linear-gradient(180deg,var(--card-a),var(--card-b));
+  color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;transition:all .2s ease}
+.q:hover{border-color:rgba(255,179,123,.5);color:var(--accent);transform:translateY(-1px)}
+.q .go{font-family:var(--mono);font-size:10px;color:var(--dim)}
+.q:hover .go{color:var(--accent)}
+.custom{display:flex;gap:9px;align-items:stretch;flex-wrap:wrap}
+.custom input{flex:1;min-width:240px;padding:10px 14px;border-radius:9px;
+  border:1px solid var(--border);background:rgba(0,0,0,.28);color:var(--text);
+  font-family:inherit;font-size:13.5px}
+.custom input:focus{outline:none;border-color:rgba(255,179,123,.5)}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="topbar">
+    <div>
+      <h1>Watchlist</h1>
+      <p class="sub">find a thread, comment, paste the link, check back later.</p>
+    </div>
+    <div class="topbar-actions">
+      <a class="btn ghost" href="{{ url_for('index') }}">dashboard</a>
+      <a class="btn ghost" href="{{ url_for('logs_view') }}">logs</a>
+    </div>
+  </header>
+
+  <nav class="strip">
+    {% for key, item in integrations.items() %}
+    <span class="pill {{ 'ok' if item.ok else 'warn' }}">
+      <em>{{ item.label }}</em><span class="pill-detail">{{ item.detail }}</span>
+    </span>
+    {% endfor %}
+  </nav>
+
+  <section class="panel">
+    <h2>Find threads</h2>
+    <div class="queries" id="queries"></div>
+    <div class="custom">
+      <input id="q" placeholder="your own search, reddit gets appended automatically">
+      <button class="btn" id="qgo" type="button">Search Google</button>
+    </div>
+    <p class="hint" style="margin-top:12px">
+      Opens Google in a new tab. Read the results yourself, pick a thread worth answering,
+      then bring the comment link back here.
+    </p>
+  </section>
+
+  <section class="panel">
+    <h2>Add comments</h2>
+    <form method="post" action="{{ url_for('watch_add') }}">
+      <textarea class="paste" name="urls" placeholder="https://www.reddit.com/r/IPTV/comments/1abcdef/thread_title/mno9876/
+one per line"></textarea>
+      <input class="field" name="note" placeholder="what you said, or why this thread (optional)">
+      <div class="formrow">
+        <button class="btn" type="submit">Add to watchlist</button>
+        <span class="hint">Use the comment's own share link &mdash; it ends in the comment id, not the thread slug.</span>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>Tracking {{ rows | length }}</h2>
+    <table class="grid">
+      <thead>
+        <tr><th>Sub</th><th>Comment</th><th>Added</th><th>Last checked</th><th>State</th><th></th></tr>
+      </thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td class="mono dim">r/{{ r.subreddit or '?' }}</td>
+          <td class="link">
+            <a href="https://reddit.com/r/{{ r.subreddit }}/comments/{{ r.post_id }}/-/{{ r.id }}"
+               target="_blank" rel="noopener">{{ r.id }}</a>
+            {% if r.mentions_marker %}<span class="badge marker">&#127819;</span>{% endif %}
+          </td>
+          <td class="dim tiny">{{ r.created_utc | ago }} ago</td>
+          <td class="dim tiny {{ 'stale' if (now - (r.last_seen or now)) > 86400 and not r.deleted }}">
+            {{ r.last_seen | ago }} ago
+          </td>
+          <td>
+            {% if r.deleted %}
+              <span class="badge bad">gone</span>
+              <span class="dim tiny">{{ r.delete_reason }}</span>
+            {% else %}
+              <span class="badge good">up</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="acts">
+              {% if not r.deleted %}
+              <form method="post" action="{{ url_for('watch_verdict', cid=r.id, verdict='alive') }}">
+                <button class="mini up" type="submit">still up</button>
+              </form>
+              <form method="post" action="{{ url_for('watch_verdict', cid=r.id, verdict='gone') }}">
+                <button class="mini down" type="submit">it's gone</button>
+              </form>
+              {% else %}
+              <form method="post" action="{{ url_for('watch_verdict', cid=r.id, verdict='alive') }}">
+                <button class="mini up" type="submit">it's back</button>
+              </form>
+              {% endif %}
+              <form method="post" action="{{ url_for('watch_drop', cid=r.id) }}">
+                <button class="mini" type="submit">drop</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="empty">Nothing tracked yet. Paste a comment link above.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel">
+    <h2>How this works</h2>
+    <p class="hint">
+      Open a comment link in a new tab and look at it. If the comment is there, click <b>still up</b>.
+      If it's missing or shows as removed, click <b>it's gone</b>.<br><br>
+      Two of your comments gone on the same thread blacklists that thread. More than half your
+      comments gone in a subreddit, over at least five comments, flags the whole subreddit.
+      A comment that vanished under an hour is recorded as a suspected mod or filter action &mdash;
+      suspected, not proven.
+    </p>
+  </section>
+
+</div>
+
+<script>
+var SAVED = [
+  "iptv service reddit",
+  "iptv canada reddit",
+  "cheap iptv service reddit",
+  "best iptv 2026 reddit",
+  "iptv firestick reddit",
+  "iptv reseller panel reddit",
+  "site:reddit.com/r/IPTV recommendation"
+];
+
+function open_google(text) {
+  var q = (text || "").trim();
+  if (!q) { return; }
+  if (q.toLowerCase().indexOf("reddit") === -1) { q += " reddit"; }
+  window.open("https://www.google.com/search?q=" + encodeURIComponent(q), "_blank", "noopener");
+}
+
+var box = document.getElementById("queries");
+SAVED.forEach(function (text) {
+  var b = document.createElement("button");
+  b.type = "button";
+  b.className = "q";
+  b.innerHTML = "<span></span><span class='go'>open</span>";
+  b.firstChild.textContent = text;
+  b.addEventListener("click", function () { open_google(text); });
+  box.appendChild(b);
+});
+
+document.getElementById("qgo").addEventListener("click", function () {
+  open_google(document.getElementById("q").value);
+});
+document.getElementById("q").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") { open_google(this.value); }
+});
+</script>
+</body>
+</html>

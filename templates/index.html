@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ENI Monitor</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="shell">
+
+  <header class="topbar">
+    <div>
+      <h1>ENI Monitor</h1>
+      <p class="sub">posts, comments, upvotes. live view.</p>
+    </div>
+    <div class="topbar-actions">
+      <span class="count">{{ stats.posts }} tracked</span>
+      <form method="post" action="{{ url_for('sync') }}">
+        <button class="btn" type="submit">&#10227; refresh</button>
+      </form>
+    </div>
+  </header>
+
+  <nav class="strip">
+    {% for key, item in integrations.items() %}
+    <span class="pill {{ 'ok' if item.ok else 'warn' }}">
+      <em>{{ item.label }}</em><span class="pill-detail">{{ item.detail }}</span>
+    </span>
+    {% endfor %}
+    <a class="pill link" href="{{ url_for('logs_view') }}"><em>Logs</em><span class="pill-detail">health</span></a>
+  </nav>
+
+  <section class="cards">
+    <div class="card"><span class="card-label">Posts</span><span class="card-num">{{ stats.posts }}</span></div>
+    <div class="card"><span class="card-label">Comments</span><span class="card-num">{{ stats.comments }}</span></div>
+    <div class="card"><span class="card-label">Ours</span><span class="card-num">{{ stats.ours }}</span></div>
+    <div class="card {{ 'alarm' if stats.deleted else '' }}"><span class="card-label">Deleted</span><span class="card-num">{{ stats.deleted }}</span></div>
+  </section>
+
+  <section class="panel">
+    <table class="grid">
+      <thead>
+        <tr><th class="rank">Rank</th><th>Sub</th><th>Author</th><th>Title</th><th class="num">Score</th></tr>
+      </thead>
+      <tbody>
+      {% for row in rows %}
+        <tr>
+          <td class="rank">{{ loop.index }}</td>
+          <td class="mono dim">r/{{ row.subreddit }}</td>
+          <td class="dim">u/{{ row.author }}</td>
+          <td>
+            <a href="{{ url_for('post_view', pid=row.id) }}">{{ row.title[:96] }}</a>
+            {% if row.marker_hits %}<span class="badge marker">&#127819;</span>{% endif %}
+            {% if row.blacklisted %}<span class="badge bad">blacklisted</span>{% endif %}
+            {% if row.gone %}<span class="badge bad">{{ row.gone }} gone</span>{% endif %}
+            {% if row.ours %}<span class="badge good">{{ row.ours }} ours</span>{% endif %}
+          </td>
+          <td class="num">{{ row.rank_score | round(0) | int }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="empty">Nothing yet. Hit refresh.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel activity">
+    <h2>Recent activity</h2>
+    <ul class="logfeed">
+    {% for l in logs %}
+      <li><span class="t">{{ l.ts | ts }}</span><span class="lvl {{ l.level | lower }}">{{ l.level }}</span><span>{{ l.message }}</span></li>
+    {% else %}
+      <li class="empty">quiet.</li>
+    {% endfor %}
+    </ul>
+  </section>
+
+</div>
+</body>
+</html>

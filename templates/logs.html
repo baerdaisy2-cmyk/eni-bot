@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ENI Monitor — logs</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="shell">
+
+  <header class="topbar">
+    <div>
+      <h1>Logs</h1>
+      <p class="sub">what happened, in plain words and in machine detail.</p>
+    </div>
+    <div class="topbar-actions">
+      <a class="btn ghost" href="{{ url_for('index') }}">&#8592; dashboard</a>
+      <button class="btn" id="copyjson">copy as JSON</button>
+    </div>
+  </header>
+
+  <nav class="strip">
+    <a class="pill link {{ 'ok' if not level else '' }}" href="{{ url_for('logs_view') }}"><em>All</em><span class="pill-detail">{{ counts.values() | sum }}</span></a>
+    {% for lv in ['INFO','WARN','ERROR'] %}
+    <a class="pill link {{ 'ok' if level == lv else '' }}" href="{{ url_for('logs_view', level=lv) }}">
+      <em>{{ lv }}</em><span class="pill-detail">{{ counts.get(lv, 0) }}</span>
+    </a>
+    {% endfor %}
+  </nav>
+
+  <section class="panel">
+    <table class="grid logs">
+      <thead><tr><th>When</th><th>Level</th><th>Actor</th><th>What happened</th><th>Detail</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td class="mono dim">{{ r.ts | ts }}</td>
+          <td><span class="lvl {{ r.level | lower }}">{{ r.level }}</span></td>
+          <td class="dim">{{ r.actor }}</td>
+          <td>{{ r.message }}</td>
+          <td class="mono tiny dim">{{ r.context }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="empty">No log lines yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+</div>
+<script>
+document.getElementById('copyjson').addEventListener('click', function () {
+  fetch('/logs.json').then(function (r) { return r.json(); }).then(function (d) {
+    navigator.clipboard.writeText(JSON.stringify(d, null, 2));
+    var b = document.getElementById('copyjson');
+    b.textContent = 'copied';
+    setTimeout(function () { b.textContent = 'copy as JSON'; }, 1600);
+  });
+});
+</script>
+</body>
+</html>
