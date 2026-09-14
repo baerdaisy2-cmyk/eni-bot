@@ -7,6 +7,3 @@ __pycache__/
 *.db-shm
 exports/
 ngrok.log
-semantics.db
-test_fixture.db
-eni_monitor.db
