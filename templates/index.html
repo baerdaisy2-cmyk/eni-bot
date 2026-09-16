@@ -8,6 +8,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<style>
+.nudge{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.nudge svg{width:20px;height:20px;stroke:var(--accent);fill:none;stroke-width:1.7;
+  stroke-linecap:round;flex-shrink:0}
+.nudge p{flex:1;min-width:200px;font-size:13.5px}
+.nudge b{color:var(--accent)}
+</style>
 </head>
 <body>
 <div class="layout">
@@ -38,6 +45,15 @@
     </header>
 
     <div class="content">
+      {% if stale %}
+      <div class="banner marker nudge">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <p><b>{{ stale }}</b> comment{{ 's' if stale != 1 }} not checked in over {{ stale_hours }} hours.
+           The blacklist only learns from checks you actually make.</p>
+        <a class="btn" href="{{ url_for('watch', stale=1) }}">Check them now</a>
+      </div>
+      {% endif %}
+
       <nav class="strip">
         {% for key, item in integrations.items() %}
         <span class="pill {{ 'ok' if item.ok else 'warn' }}">

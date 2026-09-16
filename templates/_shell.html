@@ -22,6 +22,10 @@
         <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
         <span>Watchlist</span>
       </a>
+      <a href="{{ url_for('subs') }}" class="{{ 'on' if nav == 'subs' }}" data-tip="Subreddits">
+        <svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+        <span>Subreddits</span>
+      </a>
       <a href="{{ url_for('logs_view') }}" class="{{ 'on' if nav == 'logs' }}" data-tip="Logs">
         <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
         <span>Logs</span>

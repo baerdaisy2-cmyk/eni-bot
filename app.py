@@ -24,10 +24,10 @@ PERMALINK = re.compile(
     r"(?:/[^/\s]*)?(?:/(?P<comment>[A-Za-z0-9]+))?", re.I)
 
 OPEN_PATHS = {"/login", "/healthz"}
+STALE_AFTER = int(os.environ.get("ENI_STALE_HOURS", "48")) * 3600
 
 
 def users():
-    """ENI_USERS=nate:secret1,partner:secret2"""
     out = {}
     for pair in os.environ.get("ENI_USERS", "").split(","):
         pair = pair.strip()
@@ -41,12 +41,19 @@ def me():
     return session.get("user", "")
 
 
+def one(row):
+    """First column of a single-row result, sqlite or postgres."""
+    if row is None:
+        return 0
+    return list(row.values())[0] if isinstance(row, dict) else row[0]
+
+
 @app.before_request
 def require_login():
     if request.path in OPEN_PATHS or request.path.startswith("/static/"):
         return None
     if not users():
-        return None  # no users configured: local single-user mode, no gate
+        return None
     if me():
         return None
     return redirect(url_for("login", next=request.path))
@@ -98,19 +105,28 @@ def _ago(value):
     return "%dd" % (delta // 86400)
 
 
+def stale_count():
+    cutoff = int(time.time()) - STALE_AFTER
+    con = db.connect()
+    n = one(con.execute(
+        "SELECT COUNT(*) FROM comments WHERE is_ours=1 AND deleted=0 AND last_seen < ?",
+        (cutoff,)).fetchone())
+    con.close()
+    return n
+
+
 def integrations():
     con = db.connect()
-    watching = con.execute(
-        "SELECT COUNT(*) AS n FROM comments WHERE is_ours=1 AND deleted=0").fetchone()
+    live = one(con.execute(
+        "SELECT COUNT(*) FROM comments WHERE is_ours=1 AND deleted=0").fetchone())
     con.close()
-    n = watching["n"] if isinstance(watching, dict) else watching[0]
     return {
         "who": {"label": me() or "local", "ok": bool(me()),
                 "detail": "signed in" if me() else "no login set"},
         "store": {"label": "Data", "ok": db.backend() == "postgres",
                   "detail": "shared (%s)" % db.backend() if db.backend() == "postgres"
                             else "this mac only"},
-        "watch": {"label": "Watching", "ok": n > 0, "detail": "%d live" % n},
+        "watch": {"label": "Watching", "ok": live > 0, "detail": "%d live" % live},
     }
 
 
@@ -118,35 +134,73 @@ def integrations():
 def index():
     score.run_scoring()
     return render_template(
-        "index.html",
-        rows=score.ranked(50),
-        stats=db.stats(),
-        integrations=integrations(),
-        logs=db.recent_logs(8),
+        "index.html", rows=score.ranked(50), stats=db.stats(),
+        integrations=integrations(), logs=db.recent_logs(8),
+        stale=stale_count(), stale_hours=STALE_AFTER // 3600,
     )
 
 
-# ----------------------------------------------------------------- watchlist
+# ------------------------------------------------------------ subreddits --
+@app.route("/subs")
+def subs():
+    """Survival rate per subreddit. Pure aggregation over what is already stored."""
+    con = db.connect()
+    rows = con.execute(
+        """SELECT p.subreddit AS sub,
+                  COUNT(*) AS total,
+                  SUM(c.deleted) AS gone,
+                  MAX(c.last_seen) AS seen
+           FROM comments c JOIN posts p ON p.id = c.post_id
+           WHERE c.is_ours = 1 AND p.subreddit IS NOT NULL AND p.subreddit != ''
+           GROUP BY p.subreddit
+           ORDER BY COUNT(*) DESC""").fetchall()
+    flagged = {one({"v": r["value"]} if isinstance(r, dict) else r): True
+               for r in con.execute(
+                   "SELECT value FROM blacklist WHERE kind='subreddit'").fetchall()}
+    con.close()
+
+    table = []
+    for r in rows:
+        total = r["total"] or 0
+        gone = r["gone"] or 0
+        survived = total - gone
+        rate = (survived / float(total) * 100) if total else 0.0
+        if total < config.SUBREDDIT_MIN_SAMPLE:
+            verdict, tone = "too few to judge", "dim"
+        elif rate >= 75:
+            verdict, tone = "friendly", "good"
+        elif rate >= 50:
+            verdict, tone = "mixed", "warn"
+        else:
+            verdict, tone = "hostile", "bad"
+        table.append({
+            "sub": r["sub"], "total": total, "gone": gone, "survived": survived,
+            "rate": round(rate), "verdict": verdict, "tone": tone,
+            "seen": r["seen"], "flagged": r["sub"] in flagged,
+        })
+    return render_template("subs.html", table=table, integrations=integrations(),
+                           minimum=config.SUBREDDIT_MIN_SAMPLE)
+
+
+# ----------------------------------------------------------------- watch --
 @app.route("/watch")
 def watch():
-    mine_only = request.args.get("mine") == "1"
+    only_stale = request.args.get("stale") == "1"
+    cutoff = int(time.time()) - STALE_AFTER
     con = db.connect()
-    if mine_only and me():
-        rows = con.execute(
-            """SELECT c.*, p.subreddit, p.title, p.permalink AS thread_url
+    base = ("""SELECT c.*, p.subreddit, p.title, p.permalink AS thread_url
                FROM comments c LEFT JOIN posts p ON p.id = c.post_id
-               WHERE c.is_ours = 1 AND c.owner = ?
-               ORDER BY c.deleted ASC, c.last_seen ASC""", (me(),)).fetchall()
+               WHERE c.is_ours = 1 """)
+    if only_stale:
+        rows = con.execute(base + "AND c.deleted=0 AND c.last_seen < ? "
+                           "ORDER BY c.last_seen ASC", (cutoff,)).fetchall()
     else:
-        rows = con.execute(
-            """SELECT c.*, p.subreddit, p.title, p.permalink AS thread_url
-               FROM comments c LEFT JOIN posts p ON p.id = c.post_id
-               WHERE c.is_ours = 1
-               ORDER BY c.deleted ASC, c.last_seen ASC""").fetchall()
+        rows = con.execute(base + "ORDER BY c.deleted ASC, c.last_seen ASC").fetchall()
     con.close()
     return render_template("watch.html", rows=[dict(r) for r in rows],
                            integrations=integrations(), now=int(time.time()),
-                           me=me(), mine_only=mine_only)
+                           me=me(), only_stale=only_stale,
+                           stale=stale_count(), stale_seconds=STALE_AFTER)
 
 
 @app.route("/watch/add", methods=["POST"])
@@ -202,11 +256,12 @@ def watch_add():
 def watch_verdict(cid, verdict):
     now = int(time.time())
     who = me() or "local"
+    back = request.form.get("back") or url_for("watch")
     con = db.connect()
     row = con.execute("SELECT * FROM comments WHERE id=?", (cid,)).fetchone()
     if row is None:
         con.close()
-        return redirect(url_for("watch"))
+        return redirect(back)
     sub_row = con.execute("SELECT subreddit FROM posts WHERE id=?",
                           (row["post_id"],)).fetchone()
     sub = sub_row["subreddit"] if sub_row else ""
@@ -221,7 +276,7 @@ def watch_verdict(cid, verdict):
                "%s checked comment %s in r/%s and it is still up" % (who, cid, sub),
                {"comment_id": cid, "post_id": row["post_id"], "subreddit": sub,
                 "checked_by": who, "owner": row["owner"]})
-        return redirect(url_for("watch"))
+        return redirect(back)
 
     alive_for = now - (row["first_seen"] or now)
     reason = ("mod_or_filter_suspected" if alive_for < config.FAST_DELETE_WINDOW
@@ -238,7 +293,7 @@ def watch_verdict(cid, verdict):
             "reason": reason, "alive_seconds": alive_for,
             "checked_by": who, "owner": row["owner"]})
     monitor.check_blacklist(row["post_id"], sub)
-    return redirect(url_for("watch"))
+    return redirect(back)
 
 
 @app.route("/watch/<cid>/drop", methods=["POST"])
@@ -249,10 +304,10 @@ def watch_drop(cid):
     con.close()
     db.log("INFO", "watch", "%s removed comment %s from the watchlist" % (me() or "local", cid),
            {"comment_id": cid, "by": me()})
-    return redirect(url_for("watch"))
+    return redirect(request.form.get("back") or url_for("watch"))
 
 
-# ----------------------------------------------------------- everything else
+# ----------------------------------------------------------- everything --
 @app.route("/sync", methods=["POST"])
 def sync():
     result = import_export.import_latest()
@@ -332,10 +387,12 @@ def healthz():
 @app.route("/health")
 def health():
     out = {"status": "ok", "db": False, "backend": db.backend(),
-           "users": len(users()), "llm": "not configured", "ts": int(time.time())}
+           "users": len(users()), "stale": 0, "llm": "not configured",
+           "ts": int(time.time())}
     try:
         db.stats()
         out["db"] = True
+        out["stale"] = stale_count()
     except Exception as exc:
         out["status"] = "degraded"
         out["db_error"] = str(exc)
