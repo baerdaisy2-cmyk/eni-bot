@@ -25,6 +25,7 @@ PERMALINK = re.compile(
 
 OPEN_PATHS = {"/login", "/healthz"}
 STALE_AFTER = int(os.environ.get("ENI_STALE_HOURS", "48")) * 3600
+BOOTED = int(time.time())
 
 
 def users():
@@ -42,7 +43,6 @@ def me():
 
 
 def one(row):
-    """First column of a single-row result, sqlite or postgres."""
     if row is None:
         return 0
     return list(row.values())[0] if isinstance(row, dict) else row[0]
@@ -130,6 +130,69 @@ def integrations():
     }
 
 
+def llm_state():
+    """Honest: a localhost default is not reachable from a hosted server."""
+    base = config.LLM_BASE or ""
+    local = "localhost" in base or "127.0.0.1" in base
+    hosted = bool(os.environ.get("RENDER") or os.environ.get("PORT"))
+    if not comment_gen.FORMULA:
+        return False, "no formula yet — the generate button stays off"
+    if local and hosted:
+        return False, "points at localhost, unreachable from this server"
+    if local:
+        return True, "local model at %s" % base
+    if not config.LLM_KEY:
+        return False, "remote endpoint set but no API key"
+    return True, config.LLM_MODEL
+
+
+def health_report():
+    checks = []
+    db_ok, db_note = True, db.backend()
+    started = time.time()
+    try:
+        con = db.connect()
+        con.execute("SELECT 1 AS ok").fetchone()
+        con.close()
+        db_note = "%s, responded in %dms" % (db.backend(), (time.time() - started) * 1000)
+    except Exception as exc:
+        db_ok = False
+        db_note = str(exc)[:110]
+    checks.append({"name": "Database", "ok": db_ok, "note": db_note,
+                   "why": "where every comment, log line and blacklist entry lives"})
+
+    shared = db.backend() == "postgres"
+    checks.append({"name": "Shared storage", "ok": shared,
+                   "note": "Supabase Postgres" if shared else "local sqlite file only",
+                   "why": "without this, you and gustavo see different data"})
+
+    n_users = len(users())
+    checks.append({"name": "Sign-in", "ok": n_users > 0,
+                   "note": "%d account%s configured" % (n_users, "" if n_users == 1 else "s"),
+                   "why": "no accounts means the site is open to anyone who finds it"})
+
+    stale = 0
+    try:
+        stale = stale_count()
+    except Exception:
+        pass
+    checks.append({"name": "Checks up to date", "ok": stale == 0,
+                   "note": "nothing overdue" if stale == 0
+                           else "%d comment%s unchecked for over %dh" % (
+                                stale, "" if stale == 1 else "s", STALE_AFTER // 3600),
+                   "why": "the blacklist only learns from checks you actually make"})
+
+    llm_ok, llm_note = llm_state()
+    checks.append({"name": "Draft generator", "ok": llm_ok, "note": llm_note,
+                   "why": "optional — writes reply drafts you read before posting"})
+
+    reddit_note = "manual checks only — Reddit's API is closed to new apps"
+    checks.append({"name": "Reddit access", "ok": False, "note": reddit_note,
+                   "why": "you verify comments by eye; nothing is fetched automatically"})
+
+    return checks
+
+
 @app.route("/")
 def index():
     score.run_scoring()
@@ -140,23 +203,18 @@ def index():
     )
 
 
-# ------------------------------------------------------------ subreddits --
 @app.route("/subs")
 def subs():
-    """Survival rate per subreddit. Pure aggregation over what is already stored."""
     con = db.connect()
     rows = con.execute(
-        """SELECT p.subreddit AS sub,
-                  COUNT(*) AS total,
-                  SUM(c.deleted) AS gone,
-                  MAX(c.last_seen) AS seen
+        """SELECT p.subreddit AS sub, COUNT(*) AS total,
+                  SUM(c.deleted) AS gone, MAX(c.last_seen) AS seen
            FROM comments c JOIN posts p ON p.id = c.post_id
            WHERE c.is_ours = 1 AND p.subreddit IS NOT NULL AND p.subreddit != ''
-           GROUP BY p.subreddit
-           ORDER BY COUNT(*) DESC""").fetchall()
-    flagged = {one({"v": r["value"]} if isinstance(r, dict) else r): True
-               for r in con.execute(
-                   "SELECT value FROM blacklist WHERE kind='subreddit'").fetchall()}
+           GROUP BY p.subreddit ORDER BY COUNT(*) DESC""").fetchall()
+    flagged = set()
+    for r in con.execute("SELECT value FROM blacklist WHERE kind='subreddit'").fetchall():
+        flagged.add(r["value"] if isinstance(r, dict) else r[0])
     con.close()
 
     table = []
@@ -173,16 +231,13 @@ def subs():
             verdict, tone = "mixed", "warn"
         else:
             verdict, tone = "hostile", "bad"
-        table.append({
-            "sub": r["sub"], "total": total, "gone": gone, "survived": survived,
-            "rate": round(rate), "verdict": verdict, "tone": tone,
-            "seen": r["seen"], "flagged": r["sub"] in flagged,
-        })
+        table.append({"sub": r["sub"], "total": total, "gone": gone, "survived": survived,
+                      "rate": round(rate), "verdict": verdict, "tone": tone,
+                      "seen": r["seen"], "flagged": r["sub"] in flagged})
     return render_template("subs.html", table=table, integrations=integrations(),
                            minimum=config.SUBREDDIT_MIN_SAMPLE)
 
 
-# ----------------------------------------------------------------- watch --
 @app.route("/watch")
 def watch():
     only_stale = request.args.get("stale") == "1"
@@ -307,7 +362,6 @@ def watch_drop(cid):
     return redirect(request.form.get("back") or url_for("watch"))
 
 
-# ----------------------------------------------------------- everything --
 @app.route("/sync", methods=["POST"])
 def sync():
     result = import_export.import_latest()
@@ -326,10 +380,11 @@ def post_view(pid):
     comments = con.execute(
         "SELECT * FROM comments WHERE post_id=? ORDER BY created_utc ASC", (pid,)).fetchall()
     con.close()
+    llm_ok, _ = llm_state()
     return render_template(
         "post.html", post=dict(post), comments=[dict(c) for c in comments],
         has_marker=any(c["mentions_marker"] for c in comments),
-        can_generate=bool(comment_gen.FORMULA) and comment_gen.configured(),
+        can_generate=llm_ok,
     )
 
 
@@ -386,19 +441,30 @@ def healthz():
 
 @app.route("/health")
 def health():
-    out = {"status": "ok", "db": False, "backend": db.backend(),
-           "users": len(users()), "stale": 0, "llm": "not configured",
-           "ts": int(time.time())}
-    try:
-        db.stats()
-        out["db"] = True
-        out["stale"] = stale_count()
-    except Exception as exc:
-        out["status"] = "degraded"
-        out["db_error"] = str(exc)
-    if comment_gen.configured():
-        out["llm"] = "configured" if comment_gen.FORMULA else "configured, formula pending"
-    return jsonify(out)
+    checks = health_report()
+    up = int(time.time()) - BOOTED
+    if up < 3600:
+        uptime = "%d minutes" % max(1, up // 60)
+    elif up < 86400:
+        uptime = "%d hours" % (up // 3600)
+    else:
+        uptime = "%d days" % (up // 86400)
+    ok = all(c["ok"] for c in checks if c["name"] not in
+             ("Draft generator", "Reddit access"))
+    return render_template("health.html", checks=checks, integrations=integrations(),
+                           all_ok=ok, uptime=uptime, stats=db.stats())
+
+
+@app.route("/health.json")
+def health_json():
+    checks = health_report()
+    return jsonify({
+        "status": "ok" if all(c["ok"] for c in checks if c["name"] not in
+                              ("Draft generator", "Reddit access")) else "degraded",
+        "backend": db.backend(),
+        "checks": {c["name"]: {"ok": c["ok"], "note": c["note"]} for c in checks},
+        "ts": int(time.time()),
+    })
 
 
 if __name__ == "__main__":
