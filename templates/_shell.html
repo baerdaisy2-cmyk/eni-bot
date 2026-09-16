@@ -1,0 +1,59 @@
+<div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+
+<aside class="side">
+  <a class="brand" href="{{ url_for('index') }}">
+    <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+      <path class="body" d="M7.2 19.4c-2.6-3.4-1.6-8.2 2.2-11S18.9 5.3 22 8.1s3.6 7.8 1 11.2-7.6 4.9-11.6 3.3a10 10 0 0 1-4.2-3.2Z"/>
+      <path class="body" d="M10.6 22.6 6.4 26.2"/>
+      <path class="leaf" d="M22.4 6.6c1.6-1.9 3.6-2.6 5.6-2.3.3 2.1-.5 4-2.3 5.4-.9.7-1.9 1-2.9.9-.6-1.4-.7-2.8-.4-4Z"/>
+      <circle class="seed" cx="15.4" cy="15" r="1.5"/>
+    </svg>
+    <b>ENI Monitor</b>
+  </a>
+
+  <div>
+    <p class="nav-group">Workspace</p>
+    <nav class="nav" aria-label="Main">
+      <a href="{{ url_for('index') }}" class="{{ 'on' if nav == 'dash' }}" data-tip="Dashboard">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>
+        <span>Dashboard</span>
+      </a>
+      <a href="{{ url_for('watch') }}" class="{{ 'on' if nav == 'watch' }}" data-tip="Watchlist">
+        <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span>Watchlist</span>
+      </a>
+      <a href="{{ url_for('logs_view') }}" class="{{ 'on' if nav == 'logs' }}" data-tip="Logs">
+        <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+        <span>Logs</span>
+      </a>
+      <a href="{{ url_for('health') }}" data-tip="Health JSON">
+        <svg viewBox="0 0 24 24"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>
+        <span>Health</span>
+      </a>
+    </nav>
+  </div>
+
+  <div class="side-foot">
+    <button type="button" data-theme-toggle data-tip="Switch theme">
+      <svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+      <span id="themeLabel">Light mode</span>
+    </button>
+    <button type="button" data-collapse data-tip="Collapse sidebar">
+      <svg viewBox="0 0 24 24"><path d="M4 4v16M20 9l-4 3 4 3"/></svg>
+      <span>Collapse</span>
+    </button>
+    <a href="{{ url_for('logout') }}" data-tip="Sign out">
+      <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      <span>Sign out</span>
+    </a>
+  </div>
+</aside>
+
+<div class="scrim"></div>
+
+<div class="cmdk" role="dialog" aria-modal="true" aria-label="Command palette">
+  <input type="text" placeholder="Jump to a page, a thread, a comment..." aria-label="Search commands">
+  <ul role="listbox"></ul>
+</div>
+
+<div class="toasts" aria-live="polite"></div>

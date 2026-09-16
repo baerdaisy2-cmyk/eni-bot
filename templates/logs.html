@@ -1,62 +1,79 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ENI Monitor — logs</title>
+<title>Logs — ENI Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-<div class="shell">
+<div class="layout">
+  {% set nav = 'logs' %}
+  {% include "_shell.html" %}
 
-  <header class="topbar">
-    <div>
-      <h1>Logs</h1>
-      <p class="sub">what happened, in plain words and in machine detail.</p>
+  <main class="main">
+    <header class="top">
+      <button class="btn icon ghost burger" data-burger aria-label="Open menu">
+        <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <div>
+        <h1>Logs</h1>
+        <p class="sub">plain words for you, structured detail for machines.</p>
+      </div>
+      <div class="spacer"></div>
+      <button class="kbd" data-cmdk aria-label="Open command palette">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        Search <kbd>⌘K</kbd>
+      </button>
+      <button class="btn" id="copyjson">
+        <svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+        Copy JSON
+      </button>
+      <div class="avatar" data-tip="{{ integrations.who.label }}">{{ integrations.who.label[:2] | upper }}</div>
+    </header>
+
+    <div class="content">
+      <nav class="strip">
+        <a class="pill {{ 'ok' if not level }}" href="{{ url_for('logs_view') }}"><em>All</em><small>{{ counts.values() | sum }}</small></a>
+        {% for lv in ['INFO','WARN','ERROR'] %}
+        <a class="pill {{ 'ok' if level == lv }}" href="{{ url_for('logs_view', level=lv) }}"><em>{{ lv }}</em><small>{{ counts.get(lv, 0) }}</small></a>
+        {% endfor %}
+      </nav>
+
+      <section class="panel">
+        <table data-sortable>
+          <thead><tr><th>When</th><th>Level</th><th>Actor</th><th>What happened</th><th class="no">Detail</th></tr></thead>
+          <tbody>
+          {% for r in rows %}
+            <tr>
+              <td class="mono dim">{{ r.ts | ts }}</td>
+              <td><span class="lvl {{ r.level | lower }}">{{ r.level }}</span></td>
+              <td class="dim tiny">{{ r.actor }}</td>
+              <td>{{ r.message }}</td>
+              <td class="mono dim tiny">{{ r.context }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="empty">
+              <strong>No log lines yet</strong>
+              Anything the monitor does lands here, newest first.
+            </td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </section>
     </div>
-    <div class="topbar-actions">
-      <a class="btn ghost" href="{{ url_for('index') }}">&#8592; dashboard</a>
-      <button class="btn" id="copyjson">copy as JSON</button>
-    </div>
-  </header>
-
-  <nav class="strip">
-    <a class="pill link {{ 'ok' if not level else '' }}" href="{{ url_for('logs_view') }}"><em>All</em><span class="pill-detail">{{ counts.values() | sum }}</span></a>
-    {% for lv in ['INFO','WARN','ERROR'] %}
-    <a class="pill link {{ 'ok' if level == lv else '' }}" href="{{ url_for('logs_view', level=lv) }}">
-      <em>{{ lv }}</em><span class="pill-detail">{{ counts.get(lv, 0) }}</span>
-    </a>
-    {% endfor %}
-  </nav>
-
-  <section class="panel">
-    <table class="grid logs">
-      <thead><tr><th>When</th><th>Level</th><th>Actor</th><th>What happened</th><th>Detail</th></tr></thead>
-      <tbody>
-      {% for r in rows %}
-        <tr>
-          <td class="mono dim">{{ r.ts | ts }}</td>
-          <td><span class="lvl {{ r.level | lower }}">{{ r.level }}</span></td>
-          <td class="dim">{{ r.actor }}</td>
-          <td>{{ r.message }}</td>
-          <td class="mono tiny dim">{{ r.context }}</td>
-        </tr>
-      {% else %}
-        <tr><td colspan="5" class="empty">No log lines yet.</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </section>
-
+  </main>
 </div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
 <script>
 document.getElementById('copyjson').addEventListener('click', function () {
   fetch('/logs.json').then(function (r) { return r.json(); }).then(function (d) {
     navigator.clipboard.writeText(JSON.stringify(d, null, 2));
-    var b = document.getElementById('copyjson');
-    b.textContent = 'copied';
-    setTimeout(function () { b.textContent = 'copy as JSON'; }, 1600);
-  });
+    window.toast(d.length + ' log lines copied', 'good');
+  }).catch(function () { window.toast('Could not copy the logs', 'bad'); });
 });
 </script>
 </body>
