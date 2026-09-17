@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-<head>{% include "_head.html" %}<title>Sign in — ENI Monitor</title></head>
+<head>{% include "_head.html" %}<title>Sign in — VANTA</title></head>
 <body>
 <div class="gate">
   <div class="panel">
     <div class="wordmark">
-      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
-        <path class="body" d="M7.2 19.4c-2.6-3.4-1.6-8.2 2.2-11S18.9 5.3 22 8.1s3.6 7.8 1 11.2-7.6 4.9-11.6 3.3a10 10 0 0 1-4.2-3.2Z"/>
-        <path class="body" d="M10.6 22.6 6.4 26.2"/>
-        <path class="leaf" d="M22.4 6.6c1.6-1.9 3.6-2.6 5.6-2.3.3 2.1-.5 4-2.3 5.4-.9.7-1.9 1-2.9.9-.6-1.4-.7-2.8-.4-4Z"/>
-        <circle class="seed" cx="15.4" cy="15" r="1.5"/>
+      <svg class="mark" style="width:34px;height:34px" viewBox="0 0 28 28" aria-hidden="true">
+        <path d="M4 5 L14 23 L24 5" fill="none" stroke="var(--yellow)" stroke-width="2.6"
+              stroke-linecap="square" stroke-linejoin="miter"/>
+        <path d="M1 14 H27" fill="none" stroke="var(--yellow)" stroke-width="1" opacity=".45"/>
+        <rect x="12.4" y="19.4" width="3.2" height="3.2" fill="var(--yellow)"/>
       </svg>
     </div>
-    <h1>ENI MONITOR</h1>
+    <h1 style="font-size:24px;letter-spacing:.14em">VANTA</h1>
     <p class="sub">restricted access</p>
 
     {% if error %}<p class="err">{{ error }}</p>{% endif %}
