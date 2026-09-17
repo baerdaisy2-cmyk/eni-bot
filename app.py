@@ -14,10 +14,12 @@ import import_export
 import monitor
 import reddit
 import score
+import scraper
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("ENI_SECRET", "")
 db.init()
+scraper.init()
 
 PERMALINK = re.compile(
     r"reddit\.com/r/(?P<sub>[A-Za-z0-9_]+)/comments/(?P<post>[A-Za-z0-9]+)"
@@ -52,9 +54,7 @@ def one(row):
 def require_login():
     if request.path in OPEN_PATHS or request.path.startswith("/static/"):
         return None
-    if not users():
-        return None
-    if me():
+    if not users() or me():
         return None
     return redirect(url_for("login", next=request.path))
 
@@ -120,6 +120,7 @@ def integrations():
     live = one(con.execute(
         "SELECT COUNT(*) FROM comments WHERE is_ours=1 AND deleted=0").fetchone())
     con.close()
+    s = scraper.status()
     return {
         "who": {"label": me() or "local", "ok": bool(me()),
                 "detail": "signed in" if me() else "no login set"},
@@ -127,11 +128,12 @@ def integrations():
                   "detail": "shared (%s)" % db.backend() if db.backend() == "postgres"
                             else "this mac only"},
         "watch": {"label": "Watching", "ok": live > 0, "detail": "%d live" % live},
+        "scraper": {"label": "Scraper", "ok": s["ok"],
+                    "detail": s["note"] if s["ok"] else "offline"},
     }
 
 
 def llm_state():
-    """Honest: a localhost default is not reachable from a hosted server."""
     base = config.LLM_BASE or ""
     local = "localhost" in base or "127.0.0.1" in base
     hosted = bool(os.environ.get("RENDER") or os.environ.get("PORT"))
@@ -146,53 +148,7 @@ def llm_state():
     return True, config.LLM_MODEL
 
 
-def health_report():
-    checks = []
-    db_ok, db_note = True, db.backend()
-    started = time.time()
-    try:
-        con = db.connect()
-        con.execute("SELECT 1 AS ok").fetchone()
-        con.close()
-        db_note = "%s, responded in %dms" % (db.backend(), (time.time() - started) * 1000)
-    except Exception as exc:
-        db_ok = False
-        db_note = str(exc)[:110]
-    checks.append({"name": "Database", "ok": db_ok, "note": db_note,
-                   "why": "where every comment, log line and blacklist entry lives"})
-
-    shared = db.backend() == "postgres"
-    checks.append({"name": "Shared storage", "ok": shared,
-                   "note": "Supabase Postgres" if shared else "local sqlite file only",
-                   "why": "without this, you and gustavo see different data"})
-
-    n_users = len(users())
-    checks.append({"name": "Sign-in", "ok": n_users > 0,
-                   "note": "%d account%s configured" % (n_users, "" if n_users == 1 else "s"),
-                   "why": "no accounts means the site is open to anyone who finds it"})
-
-    stale = 0
-    try:
-        stale = stale_count()
-    except Exception:
-        pass
-    checks.append({"name": "Checks up to date", "ok": stale == 0,
-                   "note": "nothing overdue" if stale == 0
-                           else "%d comment%s unchecked for over %dh" % (
-                                stale, "" if stale == 1 else "s", STALE_AFTER // 3600),
-                   "why": "the blacklist only learns from checks you actually make"})
-
-    llm_ok, llm_note = llm_state()
-    checks.append({"name": "Draft generator", "ok": llm_ok, "note": llm_note,
-                   "why": "optional — writes reply drafts you read before posting"})
-
-    reddit_note = "manual checks only — Reddit's API is closed to new apps"
-    checks.append({"name": "Reddit access", "ok": False, "note": reddit_note,
-                   "why": "you verify comments by eye; nothing is fetched automatically"})
-
-    return checks
-
-
+# ------------------------------------------------------------- dashboard --
 @app.route("/")
 def index():
     score.run_scoring()
@@ -200,9 +156,98 @@ def index():
         "index.html", rows=score.ranked(50), stats=db.stats(),
         integrations=integrations(), logs=db.recent_logs(8),
         stale=stale_count(), stale_hours=STALE_AFTER // 3600,
+        tracking=scraper.our_tracking(), longterm=scraper.long_term(),
+        deleted=scraper.deleted_stats(),
     )
 
 
+# --------------------------------------------------------------- scraper --
+@app.route("/scrape", methods=["GET", "POST"])
+def scrape():
+    payload, error = None, ""
+    if request.method == "POST":
+        url = request.form.get("url", "").strip()
+        try:
+            payload = scraper.scrape(url)
+        except ValueError as exc:
+            error = str(exc)
+        except LookupError as exc:
+            error = str(exc)
+        except Exception as exc:
+            error = "local scraper problem: %s" % str(exc)[:140]
+            db.log("ERROR", "scraper", "scrape failed for %s" % url, {"error": str(exc)[:200]})
+    if payload is None and not error:
+        payload = scraper.last_scrape()
+    enrich_ok, enrich_hits, enrich_total = scraper.enrichment_working()
+    return render_template("scrape.html", payload=payload, error=error,
+                           integrations=integrations(), status=scraper.status(),
+                           enrich_ok=enrich_ok, enrich_hits=enrich_hits,
+                           enrich_total=enrich_total)
+
+
+@app.route("/scrape.json")
+def scrape_json():
+    return jsonify(scraper.full_payload())
+
+
+@app.route("/data.json")
+def data_json():
+    return jsonify(scraper.full_payload())
+
+
+# -------------------------------------------------------------- keywords --
+@app.route("/keywords", methods=["GET", "POST"])
+def keywords_view():
+    note = ""
+    if request.method == "POST":
+        action = request.form.get("action", "")
+        if action == "add":
+            ok, msg = scraper.add_keyword(request.form.get("word", ""))
+            note = ("watching \"%s\"" % msg) if ok else msg
+            if ok:
+                db.log("INFO", "scraper", "%s started watching the keyword \"%s\"" % (
+                    me() or "local", msg), {"keyword": msg})
+        elif action == "remove":
+            scraper.remove_keyword(request.form.get("word", ""))
+            note = "stopped watching that keyword"
+        elif action == "sweep":
+            found, msg = scraper.sweep_keywords()
+            note = "%d new match%s — %s" % (found, "" if found == 1 else "es", msg)
+        return redirect(url_for("keywords_view", note=note))
+    return render_template("keywords.html", words=scraper.keywords(),
+                           hits=scraper.keyword_hits(), integrations=integrations(),
+                           status=scraper.status(), note=request.args.get("note", ""),
+                           maximum=scraper.MAX_KEYWORDS)
+
+
+# ------------------------------------------------------------- deletions --
+@app.route("/deletions")
+def deletions():
+    stats = scraper.deleted_stats()
+    con = db.connect()
+    recent = con.execute(
+        """SELECT c.id, c.owner, c.deleted_at, c.delete_reason, p.subreddit, p.id AS post_id
+           FROM comments c LEFT JOIN posts p ON p.id = c.post_id
+           WHERE c.deleted = 1 ORDER BY c.deleted_at DESC LIMIT 60""").fetchall()
+    fast = one(con.execute(
+        "SELECT COUNT(*) FROM comments WHERE deleted=1 AND "
+        "delete_reason='mod_or_filter_suspected'").fetchone())
+    con.close()
+    return render_template("deletions.html", stats=stats,
+                           recent=[dict(r) for r in recent], fast=fast,
+                           integrations=integrations(),
+                           minimum=config.SUBREDDIT_MIN_SAMPLE)
+
+
+# ------------------------------------------------------------ performers --
+@app.route("/performers")
+def performers():
+    return render_template("performers.html", people=scraper.top_performers(),
+                           tracking=scraper.our_tracking(),
+                           longterm=scraper.long_term(), integrations=integrations())
+
+
+# ------------------------------------------------------------- subreddits --
 @app.route("/subs")
 def subs():
     con = db.connect()
@@ -238,6 +283,7 @@ def subs():
                            minimum=config.SUBREDDIT_MIN_SAMPLE)
 
 
+# ------------------------------------------------------------------ watch --
 @app.route("/watch")
 def watch():
     only_stale = request.args.get("stale") == "1"
@@ -383,9 +429,7 @@ def post_view(pid):
     llm_ok, _ = llm_state()
     return render_template(
         "post.html", post=dict(post), comments=[dict(c) for c in comments],
-        has_marker=any(c["mentions_marker"] for c in comments),
-        can_generate=llm_ok,
-    )
+        has_marker=any(c["mentions_marker"] for c in comments), can_generate=llm_ok)
 
 
 @app.route("/post/<pid>/generate", methods=["POST"])
@@ -434,6 +478,58 @@ def logs_json():
     return jsonify(rows)
 
 
+# ------------------------------------------------------------------ health --
+def health_report():
+    checks = []
+    db_ok, started = True, time.time()
+    try:
+        con = db.connect()
+        con.execute("SELECT 1 AS ok").fetchone()
+        con.close()
+        db_note = "%s, responded in %dms" % (db.backend(), (time.time() - started) * 1000)
+    except Exception as exc:
+        db_ok, db_note = False, str(exc)[:110]
+    checks.append({"name": "Database", "ok": db_ok, "note": db_note,
+                   "why": "where every comment, log line and blacklist entry lives"})
+
+    shared = db.backend() == "postgres"
+    checks.append({"name": "Shared storage", "ok": shared,
+                   "note": "Supabase Postgres" if shared else "local sqlite file only",
+                   "why": "without this, you and gustavo see different data"})
+
+    n = len(users())
+    checks.append({"name": "Sign-in", "ok": n > 0,
+                   "note": "%d account%s configured" % (n, "" if n == 1 else "s"),
+                   "why": "no accounts means the site is open to anyone who finds it"})
+
+    s = scraper.status()
+    checks.append({"name": "Local scraper", "ok": s["ok"],
+                   "note": "%s — %s" % (s["base"], s["note"]),
+                   "why": "supplies post and comment data for the Scraper page"})
+
+    enrich_ok, hits, total = scraper.enrichment_working()
+    checks.append({"name": "Account-age lookup", "ok": enrich_ok,
+                   "note": "%d of %d cached lookups succeeded" % (hits, total)
+                           if total else "no lookups attempted yet",
+                   "why": "reddit.com blocks anonymous callers; ages stay empty when it does"})
+
+    stale = 0
+    try:
+        stale = stale_count()
+    except Exception:
+        pass
+    checks.append({"name": "Checks up to date", "ok": stale == 0,
+                   "note": "nothing overdue" if stale == 0
+                           else "%d comment%s unchecked for over %dh" % (
+                                stale, "" if stale == 1 else "s", STALE_AFTER // 3600),
+                   "why": "the blacklist only learns from checks you actually make"})
+
+    llm_ok, llm_note = llm_state()
+    checks.append({"name": "Draft generator", "ok": llm_ok, "note": llm_note,
+                   "why": "optional — writes reply drafts you read before posting"})
+    return checks
+
+
 @app.route("/healthz")
 def healthz():
     return jsonify({"ok": True, "backend": db.backend(), "ts": int(time.time())})
@@ -443,14 +539,10 @@ def healthz():
 def health():
     checks = health_report()
     up = int(time.time()) - BOOTED
-    if up < 3600:
-        uptime = "%d minutes" % max(1, up // 60)
-    elif up < 86400:
-        uptime = "%d hours" % (up // 3600)
-    else:
-        uptime = "%d days" % (up // 86400)
-    ok = all(c["ok"] for c in checks if c["name"] not in
-             ("Draft generator", "Reddit access"))
+    uptime = ("%d minutes" % max(1, up // 60)) if up < 3600 else (
+        "%d hours" % (up // 3600) if up < 86400 else "%d days" % (up // 86400))
+    soft = ("Draft generator", "Local scraper", "Account-age lookup")
+    ok = all(c["ok"] for c in checks if c["name"] not in soft)
     return render_template("health.html", checks=checks, integrations=integrations(),
                            all_ok=ok, uptime=uptime, stats=db.stats())
 
@@ -458,9 +550,10 @@ def health():
 @app.route("/health.json")
 def health_json():
     checks = health_report()
+    soft = ("Draft generator", "Local scraper", "Account-age lookup")
     return jsonify({
-        "status": "ok" if all(c["ok"] for c in checks if c["name"] not in
-                              ("Draft generator", "Reddit access")) else "degraded",
+        "status": "ok" if all(c["ok"] for c in checks if c["name"] not in soft)
+                  else "degraded",
         "backend": db.backend(),
         "checks": {c["name"]: {"ok": c["ok"], "note": c["note"]} for c in checks},
         "ts": int(time.time()),
@@ -473,5 +566,6 @@ if __name__ == "__main__":
             "ENI_USERS is set but ENI_SECRET is missing or too short.\n"
             "Add a line to .env:  ENI_SECRET=<run: openssl rand -hex 24>")
     db.log("INFO", "app", "ENI Monitor started",
-           {"backend": db.backend(), "users": len(users())})
+           {"backend": db.backend(), "users": len(users()),
+            "scraper": scraper.SCRAPER_BASE})
     app.run(host="127.0.0.1", port=int(os.environ.get("PORT", "5001")))

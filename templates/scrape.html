@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scraper — ENI Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<style>
+.cmt-row{display:flex;gap:14px;padding:15px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+.cmt-row:last-child{border-bottom:none}
+.cmt-row.gone{opacity:.45}
+.rk{width:30px;flex-shrink:0;text-align:right;font-family:var(--mono);font-size:13px;
+  font-weight:700;color:var(--faint);padding-top:8px}
+.cmt-row:nth-child(1) .rk,.rk.top{color:var(--accent)}
+.av{width:34px;height:34px;border-radius:50%;flex-shrink:0;object-fit:cover;
+  border:1px solid var(--line-2);background:var(--surface-2)}
+.cmt-main{flex:1;min-width:0}
+.cmt-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:5px}
+.cmt-meta b{font-size:13px;font-weight:650;color:var(--accent)}
+.cmt-meta span{font-size:11.5px;color:var(--faint);font-family:var(--mono)}
+.cmt-text{font-size:13.5px;line-height:1.6;color:var(--text);word-break:break-word}
+.cmt-row.gone .cmt-text{color:var(--red);font-style:italic}
+.up{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);
+  font-size:11.5px;color:var(--green)}
+
+.opcard{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.opcard .av{width:48px;height:48px}
+.opcard h3{font-size:16px;font-weight:650;letter-spacing:-.02em;margin-bottom:4px}
+.opmeta{display:flex;gap:16px;flex-wrap:wrap;font-family:var(--mono);font-size:11.5px;color:var(--dim)}
+.opmeta b{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="layout">
+  {% set nav = 'scrape' %}
+  {% include "_shell.html" %}
+
+  <main class="main">
+    <header class="top">
+      <button class="btn icon ghost burger" data-burger aria-label="Open menu">
+        <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <div>
+        <h1>Scraper</h1>
+        <p class="sub">paste a Reddit post URL, read the thread ranked by upvotes.</p>
+      </div>
+      <div class="spacer"></div>
+      <button class="kbd" data-cmdk aria-label="Open command palette">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        Search <kbd>⌘K</kbd>
+      </button>
+      <a class="btn ghost" href="{{ url_for('data_json') }}" target="_blank">JSON</a>
+      <div class="avatar" data-tip="{{ integrations.who.label }}">{{ integrations.who.label[:2] | upper }}</div>
+    </header>
+
+    <div class="content">
+      {% if not status.ok %}
+      <div class="banner bad">
+        Local scraper offline at <b>{{ status.base }}</b> — {{ status.note }}.
+        Start <code>reddit-universal-scraper</code> on this machine, or set
+        <code>SCRAPER_BASE</code> to where it runs.
+      </div>
+      {% endif %}
+      {% if not enrich_ok and enrich_total %}
+      <div class="banner marker">
+        Account-age lookup is being refused by reddit.com
+        ({{ enrich_hits }} of {{ enrich_total }} succeeded). Ages show as unknown and
+        avatars fall back to generated ones. Everything else works.
+      </div>
+      {% endif %}
+      {% if error %}<div class="banner bad">{{ error }}</div>{% endif %}
+
+      <section class="panel">
+        <h2>Scrape a post</h2>
+        <form method="post">
+          <div class="field">
+            <input name="url" id="url" placeholder=" " required
+                   value="{{ payload.scraped_post.url if payload and payload.scraped_post else '' }}">
+            <label for="url">Reddit post URL or post id</label>
+          </div>
+          <div class="row">
+            <button class="btn primary" type="submit">
+              <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5"/></svg>
+              Scrape and enrich
+            </button>
+            <span class="hint">Data comes from your local scraper. Account ages come from
+              Reddit's public user endpoint, cached so each username is fetched once.</span>
+          </div>
+        </form>
+      </section>
+
+      {% if payload and payload.scraped_post %}
+      {% set p = payload.scraped_post %}
+      <section class="panel">
+        <h2>Post</h2>
+        <div class="opcard">
+          <img class="av" src="{{ p.author.avatar }}" alt="" loading="lazy">
+          <div style="flex:1;min-width:220px">
+            <h3>{{ p.title }}</h3>
+            <div class="opmeta">
+              <span>r/{{ p.subreddit }}</span>
+              <span>u/<b>{{ p.author.username }}</b></span>
+              <span>account age:
+                <b>{% if p.author.account_age_days is not none %}{{ p.author.account_age_days }} days{% else %}unknown{% endif %}</b></span>
+              <span>{{ p.upvotes }} upvotes</span>
+              <span>{{ p.comment_count }} comments</span>
+            </div>
+          </div>
+          <a class="btn ghost" href="{{ p.url }}" target="_blank" rel="noopener">Open</a>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Comments by upvotes — {{ payload.comments | length }}</h2>
+        {% for c in payload.comments %}
+        <div class="cmt-row {{ 'gone' if c.is_deleted }}">
+          <div class="rk {{ 'top' if c.rank == 1 }}">{{ c.rank }}</div>
+          <img class="av" src="{{ c.author.avatar }}" alt="" loading="lazy">
+          <div class="cmt-main">
+            <div class="cmt-meta">
+              <b>u/{{ c.author.username }}</b>
+              <span class="up">▲ {{ c.upvotes }}</span>
+              <span>{% if c.author.account_age_days is not none %}{{ c.author.account_age_days }}d old{% else %}age unknown{% endif %}</span>
+              {% if c.posted_at %}<span>{{ c.posted_at }}</span>{% endif %}
+              {% if c.is_deleted %}<span class="tag bad">removed</span>{% endif %}
+            </div>
+            <div class="cmt-text">{{ c.content }}</div>
+          </div>
+        </div>
+        {% else %}
+        <p class="empty"><strong>No comments returned</strong>The local scraper has this post but no comments stored for it.</p>
+        {% endfor %}
+      </section>
+      {% elif not error %}
+      <section class="panel">
+        <p class="empty">
+          <strong>Nothing scraped yet</strong>
+          Paste a Reddit post URL above. The post has to already be in your local
+          scraper's database.
+        </p>
+      </section>
+      {% endif %}
+    </div>
+  </main>
+</div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

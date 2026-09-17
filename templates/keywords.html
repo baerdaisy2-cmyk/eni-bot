@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keywords — ENI Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<style>
+.kw{display:inline-flex;align-items:center;gap:10px;padding:8px 10px 8px 14px;
+  border-radius:999px;border:1px solid var(--line-2);background:var(--surface-2);font-size:13px}
+.kw b{font-weight:650}
+.kw s{text-decoration:none;font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+.kw.hot{border-color:var(--accent);box-shadow:0 0 22px -10px var(--accent)}
+.kw.hot b{color:var(--accent)}
+.kw button{background:none;border:0;color:var(--faint);cursor:pointer;font-size:15px;
+  line-height:1;padding:0 4px;transition:color .2s var(--ease)}
+.kw button:hover{color:var(--red)}
+.kwrow{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:16px}
+.hit{padding:14px 0;border-bottom:1px solid var(--line)}
+.hit:last-child{border-bottom:none}
+.hit .meta{display:flex;gap:11px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.hit .meta b{font-size:12.5px;color:var(--accent);font-weight:650}
+.hit .meta span{font-family:var(--mono);font-size:11px;color:var(--faint)}
+.hit p{font-size:13.5px;line-height:1.6;color:var(--dim);word-break:break-word}
+mark{background:var(--glow);color:var(--accent);padding:1px 3px;border-radius:3px}
+</style>
+</head>
+<body>
+<div class="layout">
+  {% set nav = 'keywords' %}
+  {% include "_shell.html" %}
+
+  <main class="main">
+    <header class="top">
+      <button class="btn icon ghost burger" data-burger aria-label="Open menu">
+        <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <div>
+        <h1>Keywords</h1>
+        <p class="sub">words you want to know about the moment they appear.</p>
+      </div>
+      <div class="spacer"></div>
+      <form method="post" style="display:inline">
+        <input type="hidden" name="action" value="sweep">
+        <button class="btn primary" type="submit">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          Sweep now
+        </button>
+      </form>
+      <div class="avatar" data-tip="{{ integrations.who.label }}">{{ integrations.who.label[:2] | upper }}</div>
+    </header>
+
+    <div class="content">
+      {% if not status.ok %}
+      <div class="banner bad">
+        Local scraper offline at <b>{{ status.base }}</b>. Sweeps need it running;
+        matches found during a manual scrape still get recorded.
+      </div>
+      {% endif %}
+      {% if note %}<div class="banner marker">{{ note }}</div>{% endif %}
+
+      <section class="panel">
+        <h2>Watching {{ words | length }} of {{ maximum }}</h2>
+        <div class="kwrow">
+          {% for k in words %}
+          <span class="kw {{ 'hot' if k.matches }}">
+            <b>{{ k.word }}</b>
+            <s>{{ k.matches or 0 }} match{{ '' if k.matches == 1 else 'es' }}</s>
+            <form method="post" style="display:inline">
+              <input type="hidden" name="action" value="remove">
+              <input type="hidden" name="word" value="{{ k.word }}">
+              <button type="submit" title="stop watching">&times;</button>
+            </form>
+          </span>
+          {% else %}
+          <span class="hint">Nothing watched yet. Add your brand names and markers below.</span>
+          {% endfor %}
+        </div>
+
+        {% if words | length < maximum %}
+        <form method="post">
+          <input type="hidden" name="action" value="add">
+          <div class="field">
+            <input name="word" id="word" placeholder=" " required maxlength="60">
+            <label for="word">new keyword (e.g. lemonrealm, prv8sup)</label>
+          </div>
+          <div class="row">
+            <button class="btn" type="submit">
+              <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              Watch this word
+            </button>
+            <span class="hint">Case-insensitive. Matched against every comment body the
+              local scraper has stored.</span>
+          </div>
+        </form>
+        {% else %}
+        <p class="hint">Limit reached. Remove one to add another.</p>
+        {% endif %}
+      </section>
+
+      <section class="panel">
+        <h2>Matches — {{ hits | length }}</h2>
+        {% for h in hits %}
+        <div class="hit">
+          <div class="meta">
+            <b>{{ h.word }}</b>
+            <span>r/{{ h.subreddit or '?' }}</span>
+            <span>u/{{ h.author or '?' }}</span>
+            <span>{{ h.found_at | ts }}</span>
+            {% if h.post_id %}
+            <a class="mono tiny" target="_blank" rel="noopener"
+               href="https://reddit.com/comments/{{ h.post_id }}">open thread</a>
+            {% endif %}
+          </div>
+          <p>{{ h.body }}</p>
+        </div>
+        {% else %}
+        <p class="empty">
+          <strong>No matches yet</strong>
+          Add a keyword, then hit <b>Sweep now</b> — or scrape a post and any hits get
+          recorded automatically.
+        </p>
+        {% endfor %}
+      </section>
+    </div>
+  </main>
+</div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

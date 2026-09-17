@@ -14,6 +14,22 @@
   stroke-linecap:round;flex-shrink:0}
 .nudge p{flex:1;min-width:200px;font-size:13.5px}
 .nudge b{color:var(--accent)}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
+.kv div{padding:14px 16px;border-radius:var(--r);border:1px solid var(--line);
+  background:var(--surface-2)}
+.kv s{text-decoration:none;display:block;font-size:9.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);font-weight:700;margin-bottom:7px}
+.kv i{font-style:normal;font-family:var(--mono);font-size:19px;font-weight:650}
+.kv i.hot{color:var(--accent)}
+.kv i.bad{color:var(--red)}
+.agg{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+.agg:last-child{border-bottom:none}
+.agg .nm{font-family:var(--mono);font-size:12.5px;min-width:130px}
+.agg .bar{flex:1;height:6px;border-radius:99px;background:var(--surface-2);
+  overflow:hidden;border:1px solid var(--line)}
+.agg .bar i{display:block;height:100%;border-radius:99px;
+  background:linear-gradient(90deg,var(--red),#f0b4b4)}
+.agg .pc{font-family:var(--mono);font-size:12px;color:var(--red);min-width:40px;text-align:right}
 </style>
 </head>
 <body>
@@ -65,8 +81,47 @@
       <section class="cards">
         <div class="stat"><b>Posts</b><i>{{ stats.posts }}</i></div>
         <div class="stat"><b>Comments</b><i>{{ stats.comments }}</i></div>
-        <div class="stat"><b>Ours</b><i>{{ stats.ours }}</i></div>
+        <div class="stat"><b>Ours</b><i>{{ tracking.total_comments_made }}</i></div>
         <div class="stat {{ 'alarm' if stats.deleted }}"><b>Deleted</b><i>{{ stats.deleted }}</i></div>
+      </section>
+
+      <section class="cards">
+        <div class="stat"><b>Ranked #1</b><i>{{ tracking.rank_1_count }}</i></div>
+        <div class="stat"><b>Ranked 2–5</b><i>{{ tracking.rank_medium_count }}</i></div>
+        <div class="stat"><b>Ranked 6+</b><i>{{ tracking.rank_low_count }}</i></div>
+        <div class="stat"><b>Threads scraped</b><i>{{ longterm.total_scrapes }}</i></div>
+      </section>
+
+      <section class="panel">
+        <h2>Long-term performance</h2>
+        <div class="kv">
+          <div><s>Period</s><i>all time</i></div>
+          <div><s>Days running</s><i>{{ longterm.days_running }}</i></div>
+          <div><s>Posts tracked</s><i>{{ longterm.total_posts_tracked }}</i></div>
+          <div><s>Comments tracked</s><i>{{ longterm.total_comments_tracked }}</i></div>
+          <div><s>Average rank</s><i class="hot">{{ longterm.avg_rank or '—' }}</i></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Aggressive metrics</h2>
+        <div class="kv" style="margin-bottom:18px">
+          <div><s>Total removed</s><i class="bad">{{ deleted.total_deleted }}</i></div>
+          <div><s>Deletion rate</s><i class="bad">{{ (deleted.deletion_rate * 100) | round(0) | int }}%</i></div>
+          <div><s>Subs measured</s><i>{{ deleted.aggressive_subreddits | length }}</i></div>
+        </div>
+        {% for s in deleted.aggressive_subreddits[:5] %}
+        <div class="agg">
+          <span class="nm">r/{{ s.subreddit }}</span>
+          <div class="bar"><i style="width:{{ (s.aggression_score * 100) | round(0) | int }}%"></i></div>
+          <span class="pc">{{ (s.aggression_score * 100) | round(0) | int }}%</span>
+        </div>
+        {% else %}
+        <p class="hint">Nothing removed yet. Numbers appear once comments start disappearing.</p>
+        {% endfor %}
+        {% if deleted.aggressive_subreddits %}
+        <div class="row"><a class="btn ghost" href="{{ url_for('deletions') }}">Full deletion report</a></div>
+        {% endif %}
       </section>
 
       <section class="panel">

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deletions — ENI Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<style>
+.bar{height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden;
+  min-width:96px;border:1px solid var(--line)}
+.bar i{display:block;height:100%;border-radius:99px;
+  background:linear-gradient(90deg,var(--red),#f0b4b4);transition:width .6s var(--ease)}
+.bar.mid i{background:linear-gradient(90deg,var(--accent),#ffd6b0)}
+.bar.low i{background:linear-gradient(90deg,var(--green),#c6dcb8)}
+.rate{display:flex;align-items:center;gap:10px}
+.rate b{font-family:var(--mono);font-size:12px;min-width:38px;text-align:right}
+</style>
+</head>
+<body>
+<div class="layout">
+  {% set nav = 'deletions' %}
+  {% include "_shell.html" %}
+
+  <main class="main">
+    <header class="top">
+      <button class="btn icon ghost burger" data-burger aria-label="Open menu">
+        <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <div>
+        <h1>Deletions</h1>
+        <p class="sub">what got removed, where, and how fast.</p>
+      </div>
+      <div class="spacer"></div>
+      <button class="kbd" data-cmdk aria-label="Open command palette">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        Search <kbd>⌘K</kbd>
+      </button>
+      <div class="avatar" data-tip="{{ integrations.who.label }}">{{ integrations.who.label[:2] | upper }}</div>
+    </header>
+
+    <div class="content">
+      <section class="cards">
+        <div class="stat {{ 'alarm' if stats.total_deleted }}">
+          <b>Total removed</b><i>{{ stats.total_deleted }}</i></div>
+        <div class="stat">
+          <b>Deletion rate</b><i>{{ (stats.deletion_rate * 100) | round(0) | int }}%</i></div>
+        <div class="stat {{ 'alarm' if fast }}">
+          <b>Fast removals</b><i>{{ fast }}</i></div>
+        <div class="stat">
+          <b>Subs measured</b><i>{{ stats.aggressive_subreddits | length }}</i></div>
+      </section>
+
+      <section class="panel">
+        <h2>Most aggressive subreddits</h2>
+        <table data-sortable>
+          <thead>
+            <tr><th>Subreddit</th><th>Comments</th><th>Removed</th>
+                <th class="no">Aggression</th><th>Score</th></tr>
+          </thead>
+          <tbody>
+          {% for s in stats.aggressive_subreddits %}
+            <tr>
+              <td class="mono">r/{{ s.subreddit }}</td>
+              <td class="dim">{{ s.total }}</td>
+              <td class="dim">{{ s.deletions }}</td>
+              <td>
+                <div class="rate">
+                  <div class="bar {{ 'low' if s.aggression_score < 0.25 else ('mid' if s.aggression_score < 0.5 else '') }}">
+                    <i style="width:{{ (s.aggression_score * 100) | round(0) | int }}%"></i>
+                  </div>
+                  <b>{{ (s.aggression_score * 100) | round(0) | int }}%</b>
+                </div>
+              </td>
+              <td class="num">{{ s.aggression_score }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="empty">
+              <strong>Nothing removed yet</strong>
+              Mark a comment <b>it's gone</b> on the watchlist, or scrape a thread that
+              contains removed comments.
+            </td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </section>
+
+      <section class="panel">
+        <h2>Recent removals</h2>
+        <table data-sortable>
+          <thead><tr><th>Comment</th><th>Subreddit</th><th>Owner</th><th>When</th><th>Inferred cause</th></tr></thead>
+          <tbody>
+          {% for r in recent %}
+            <tr>
+              <td class="mono">
+                <a href="https://reddit.com/r/{{ r.subreddit }}/comments/{{ r.post_id }}/-/{{ r.id }}"
+                   target="_blank" rel="noopener">{{ r.id }}</a>
+              </td>
+              <td class="dim">r/{{ r.subreddit or '?' }}</td>
+              <td class="dim tiny">{{ r.owner or '—' }}</td>
+              <td class="dim tiny">{{ r.deleted_at | ts }}</td>
+              <td>
+                {% if r.delete_reason == 'mod_or_filter_suspected' %}
+                <span class="tag bad">mod or filter suspected</span>
+                {% else %}
+                <span class="tag">removed or self-deleted</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="empty"><strong>Clean so far</strong>Nothing has been marked gone.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </section>
+
+      <section class="panel">
+        <h2>How the score is calculated</h2>
+        <p class="hint">
+          <b>aggression_score = removed ÷ total comments</b> in that subreddit. It counts both
+          your own comments marked gone on the watchlist and any comment the scraper found
+          showing as <code>[deleted]</code> or <code>[removed]</code>.<br><br>
+          A <b>fast removal</b> is one that vanished inside an hour of being added — that
+          pattern points at an automod rule or a filter rather than a human. Points at.
+          Reddit never says why.<br><br>
+          Under {{ minimum }} comments in a subreddit, treat the number as noise.
+        </p>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
