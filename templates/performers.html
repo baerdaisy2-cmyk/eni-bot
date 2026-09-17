@@ -1,99 +1,58 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Performers — ENI Monitor</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-<style>
-.pf{display:flex;gap:16px;align-items:center;padding:16px 0;border-bottom:1px solid var(--line)}
-.pf:last-child{border-bottom:none}
-.pf .pos{width:30px;text-align:right;font-family:var(--mono);font-size:15px;
-  font-weight:700;color:var(--faint);flex-shrink:0}
-.pf:first-child .pos{color:var(--accent)}
-.pf img{width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0;
-  border:1px solid var(--line-2);background:var(--surface-2)}
-.pf .who{flex:1;min-width:0}
-.pf .who b{display:block;font-size:14.5px;font-weight:650;margin-bottom:3px}
-.pf .who span{font-family:var(--mono);font-size:11.5px;color:var(--faint)}
-.pf .nums{display:flex;gap:22px;flex-wrap:wrap;flex-shrink:0}
-.pf .nums div{text-align:right}
-.pf .nums i{display:block;font-style:normal;font-family:var(--mono);font-size:16px;
-  font-weight:650;color:var(--accent)}
-.pf .nums s{text-decoration:none;font-size:9.5px;letter-spacing:.13em;
-  text-transform:uppercase;color:var(--faint);font-weight:700}
-</style>
-</head>
+<head>{% include "_head.html" %}<title>Performers — ENI Monitor</title></head>
 <body>
-<div class="layout">
-  {% set nav = 'performers' %}
-  {% include "_shell.html" %}
+{% set nav = 'performers' %}
+{% set page_title = 'Performers' %}
+{% set page_sub = 'output · survival · rank' %}
+{% include "_shell.html" %}
 
-  <main class="main">
-    <header class="top">
-      <button class="btn icon ghost burger" data-burger aria-label="Open menu">
-        <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-      </button>
-      <div>
-        <h1>Top performers</h1>
-        <p class="sub">who is doing the work, and whose comments survive.</p>
-      </div>
-      <div class="spacer"></div>
-      <button class="kbd" data-cmdk aria-label="Open command palette">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        Search <kbd>⌘K</kbd>
-      </button>
-      <div class="avatar" data-tip="{{ integrations.who.label }}">{{ integrations.who.label[:2] | upper }}</div>
-    </header>
+<div class="wrap">
+  <section class="grid">
+    <div class="card"><b>Comments made</b><i data-count="{{ tracking.total_comments_made }}">0</i></div>
+    <div class="card key"><b>Ranked 01</b><i data-count="{{ tracking.rank_1_count }}">0</i></div>
+    <div class="card"><b>Ranked 02—05</b><i data-count="{{ tracking.rank_medium_count }}">0</i></div>
+    <div class="card"><b>Ranked 06+</b><i data-count="{{ tracking.rank_low_count }}">0</i></div>
+  </section>
 
-    <div class="content">
-      <section class="cards">
-        <div class="stat"><b>Comments made</b><i>{{ tracking.total_comments_made }}</i></div>
-        <div class="stat"><b>Ranked #1</b><i>{{ tracking.rank_1_count }}</i></div>
-        <div class="stat"><b>Ranked 2–5</b><i>{{ tracking.rank_medium_count }}</i></div>
-        <div class="stat"><b>Ranked 6+</b><i>{{ tracking.rank_low_count }}</i></div>
-      </section>
-
-      <section class="panel">
-        <h2>Leaderboard</h2>
-        {% for p in people %}
-        <div class="pf">
-          <div class="pos">{{ loop.index }}</div>
-          <img src="{{ p.avatar }}" alt="" loading="lazy">
-          <div class="who">
-            <b>{{ p.username }}</b>
-            <span>{% if p.account_age_days is not none %}account {{ p.account_age_days }} days old{% else %}account age unknown{% endif %}</span>
-          </div>
-          <div class="nums">
-            <div><i>{{ p.comments_made }}</i><s>made</s></div>
-            <div><i>{{ p.rank_1_hits }}</i><s>rank 1</s></div>
-            <div><i>{{ p.survival_rate }}%</i><s>survived</s></div>
-          </div>
+  <section class="panel">
+    <h2>Leaderboard</h2>
+    {% for p in people %}
+    <div class="item">
+      <div class="pos">{{ '%02d' % loop.index }}</div>
+      <img class="av" style="width:34px;height:34px" src="{{ p.avatar }}" alt="" loading="lazy">
+      <div class="body">
+        <div class="meta"><b>{{ p.username }}</b></div>
+        <div class="txt" style="font-family:var(--mono);font-size:11px">
+          {% if p.account_age_days is not none %}account {{ p.account_age_days }} days old{% else %}account age unknown{% endif %}
         </div>
-        {% else %}
-        <p class="empty">
-          <strong>No one on the board yet</strong>
-          Add comments through the <a href="{{ url_for('watch') }}">watchlist</a> and the
-          people who add them appear here.
-        </p>
-        {% endfor %}
-      </section>
-
-      <section class="panel">
-        <h2>Long-term performance</h2>
-        <table>
-          <tr><td>Period</td><td class="dim">all time · {{ longterm.days_running }} days running</td></tr>
-          <tr><td>Posts tracked</td><td class="dim">{{ longterm.total_posts_tracked }}</td></tr>
-          <tr><td>Comments tracked</td><td class="dim">{{ longterm.total_comments_tracked }}</td></tr>
-          <tr><td>Threads scraped</td><td class="dim">{{ longterm.total_scrapes }}</td></tr>
-          <tr><td>Average rank of our comments</td><td class="dim">{{ longterm.avg_rank or '—' }}</td></tr>
-        </table>
-      </section>
+      </div>
+      <div class="nums">
+        <div><i>{{ p.comments_made }}</i><s>made</s></div>
+        <div><i>{{ p.rank_1_hits }}</i><s>rank 01</s></div>
+        <div><i>{{ p.survival_rate }}%</i><s>survived</s></div>
+      </div>
     </div>
-  </main>
+    {% else %}
+    <p class="empty">
+      <strong>No one on the board</strong>
+      Add comments through the <a href="{{ url_for('watch') }}">watchlist</a> and whoever adds
+      them appears here.
+    </p>
+    {% endfor %}
+  </section>
+
+  <section class="panel">
+    <h2>Long-term performance</h2>
+    <div class="kv">
+      <div><s>Period</s><i>ALL TIME</i></div>
+      <div><s>Days running</s><i>{{ longterm.days_running }}</i></div>
+      <div><s>Posts tracked</s><i>{{ longterm.total_posts_tracked }}</i></div>
+      <div><s>Comments tracked</s><i>{{ longterm.total_comments_tracked }}</i></div>
+      <div><s>Threads scraped</s><i>{{ longterm.total_scrapes }}</i></div>
+      <div><s>Average rank</s><i class="key">{{ longterm.avg_rank or '—' }}</i></div>
+    </div>
+  </section>
 </div>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>

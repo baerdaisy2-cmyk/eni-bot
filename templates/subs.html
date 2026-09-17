@@ -1,94 +1,59 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Subreddits — ENI Monitor</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-<style>
-.bar{height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden;
-  min-width:90px;border:1px solid var(--line)}
-.bar i{display:block;height:100%;border-radius:99px;
-  background:linear-gradient(90deg,var(--green),#c6dcb8);transition:width .6s var(--ease)}
-.bar.warn i{background:linear-gradient(90deg,var(--accent),#ffd6b0)}
-.bar.bad i{background:linear-gradient(90deg,var(--red),#f0b4b4)}
-.bar.dim i{background:var(--faint)}
-.rate{display:flex;align-items:center;gap:10px}
-.rate b{font-family:var(--mono);font-size:12px;min-width:38px;text-align:right}
-</style>
-</head>
+<head>{% include "_head.html" %}<title>Subreddits — ENI Monitor</title></head>
 <body>
-<div class="layout">
-  {% set nav = 'subs' %}
-  {% include "_shell.html" %}
+{% set nav = 'subs' %}
+{% set page_title = 'Subreddits' %}
+{% set page_sub = 'survival rate by community' %}
+{% include "_shell.html" %}
 
-  <main class="main">
-    <header class="top">
-      <button class="btn icon ghost burger" data-burger aria-label="Open menu">
-        <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-      </button>
-      <div>
-        <h1>Subreddits</h1>
-        <p class="sub">where your comments live, and where they get eaten.</p>
-      </div>
-      <div class="spacer"></div>
-      <button class="kbd" data-cmdk aria-label="Open command palette">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        Search <kbd>⌘K</kbd>
-      </button>
-      <div class="avatar" data-tip="{{ integrations.who.label }}">{{ integrations.who.label[:2] | upper }}</div>
-    </header>
-
-    <div class="content">
-      <section class="panel">
-        <h2>Survival rate</h2>
-        <table data-sortable>
-          <thead>
-            <tr><th>Subreddit</th><th>Posted</th><th>Survived</th><th>Gone</th>
-                <th class="no">Rate</th><th>Verdict</th></tr>
-          </thead>
-          <tbody>
-          {% for r in table %}
-            <tr>
-              <td class="mono">r/{{ r.sub }}
-                {% if r.flagged %}<span class="tag bad">flagged</span>{% endif %}</td>
-              <td class="dim">{{ r.total }}</td>
-              <td class="dim">{{ r.survived }}</td>
-              <td class="dim">{{ r.gone }}</td>
-              <td>
-                <div class="rate">
-                  <div class="bar {{ r.tone }}"><i style="width:{{ r.rate }}%"></i></div>
-                  <b>{{ r.rate }}%</b>
+<div class="wrap">
+  <section class="panel flush">
+    <h2>Survival rate</h2>
+    <div class="tablewrap">
+      <table data-sortable>
+        <thead><tr><th>Subreddit</th><th>Posted</th><th>Survived</th><th>Gone</th>
+                   <th class="no">Rate</th><th>Verdict</th></tr></thead>
+        <tbody>
+        {% for r in table %}
+          <tr>
+            <td class="mono">r/{{ r.sub }}
+              {% if r.flagged %}<span class="tag bad">flagged</span>{% endif %}</td>
+            <td class="muted">{{ r.total }}</td>
+            <td class="muted">{{ r.survived }}</td>
+            <td class="muted">{{ r.gone }}</td>
+            <td>
+              <div class="meter">
+                <div class="bar {{ 'ok' if r.tone == 'good' else ('danger' if r.tone == 'bad' else '') }}">
+                  <i style="width:{{ r.rate }}%"></i>
                 </div>
-              </td>
-              <td><span class="tag {{ 'good' if r.tone == 'good' else ('bad' if r.tone == 'bad' else 'marker') }}">{{ r.verdict }}</span></td>
-            </tr>
-          {% else %}
-            <tr><td colspan="6" class="empty">
-              <strong>No data yet</strong>
-              Add comments to your <a href="{{ url_for('watch') }}">watchlist</a> and check them.
-              Rates appear once there is something to count.
-            </td></tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </section>
-
-      <section class="panel">
-        <h2>Reading this</h2>
-        <p class="hint">
-          <b>Friendly</b> is 75% or more of your comments still up. <b>Mixed</b> is 50–74%.
-          <b>Hostile</b> is under half. Anything with fewer than {{ minimum }} comments says
-          <b>too few to judge</b> — a single removal out of two proves nothing.<br><br>
-          These numbers only move when you check comments and mark them. A subreddit that
-          looks perfect may just be one you have not verified lately.
-        </p>
-      </section>
+                <b>{{ r.rate }}%</b>
+              </div>
+            </td>
+            <td><span class="tag {{ 'good' if r.tone == 'good' else ('bad' if r.tone == 'bad' else 'key') }}">{{ r.verdict }}</span></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="empty">
+            <strong>No data yet</strong>
+            Add comments to your <a href="{{ url_for('watch') }}">watchlist</a> and check them.
+          </td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
     </div>
-  </main>
+  </section>
+
+  <section class="panel">
+    <h2>Scale</h2>
+    <p class="hint">
+      <b style="color:var(--green)">Friendly</b> — 75% or more of your comments still up.
+      <b style="color:var(--yellow)">Mixed</b> — 50 to 74%.
+      <b style="color:var(--red)">Hostile</b> — under half.
+      Fewer than {{ minimum }} comments reads <b style="color:var(--text)">too few to judge</b>;
+      one removal out of two proves nothing.<br><br>
+      These numbers only move when you check comments and mark them.
+    </p>
+  </section>
 </div>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>

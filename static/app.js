@@ -3,8 +3,48 @@
   "use strict";
 
   var root = document.documentElement;
+  var drawer = document.querySelector(".drawer");
+  var overlay = document.querySelector(".overlay");
+  var burger = document.querySelector(".burger");
 
-  // ---------------------------------------------------------------- theme --
+  // ---------------------------------------------------------------- drawer
+  function openDrawer() {
+    if (!drawer) { return; }
+    drawer.classList.add("open");
+    overlay.classList.add("open");
+    burger.setAttribute("aria-expanded", "true");
+    var first = drawer.querySelector("a, button");
+    if (first) { setTimeout(function () { first.focus(); }, 60); }
+  }
+  function closeDrawer() {
+    if (!drawer) { return; }
+    drawer.classList.remove("open");
+    overlay.classList.remove("open");
+    burger.setAttribute("aria-expanded", "false");
+    burger.focus();
+  }
+  if (burger) { burger.addEventListener("click", openDrawer); }
+  if (overlay) { overlay.addEventListener("click", closeDrawer); }
+  document.addEventListener("click", function (e) {
+    if (e.target.closest("[data-drawer-close]")) { closeDrawer(); }
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && drawer && drawer.classList.contains("open")) {
+      closeDrawer();
+    }
+    if (drawer && drawer.classList.contains("open") && e.key === "Tab") {
+      var items = drawer.querySelectorAll("a, button");
+      if (!items.length) { return; }
+      var first = items[0], last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault(); last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault(); first.focus();
+      }
+    }
+  });
+
+  // ----------------------------------------------------------------- theme
   function setTheme(t) {
     root.setAttribute("data-theme", t);
     try { localStorage.setItem("eni-theme", t); } catch (e) {}
@@ -15,167 +55,36 @@
     var saved = localStorage.getItem("eni-theme");
     if (saved) { setTheme(saved); }
   } catch (e) {}
-
   document.addEventListener("click", function (e) {
-    var t = e.target.closest("[data-theme-toggle]");
-    if (!t) { return; }
-    setTheme(root.getAttribute("data-theme") === "light" ? "dark" : "light");
-  });
-
-  // -------------------------------------------------------------- sidebar --
-  document.addEventListener("click", function (e) {
-    if (e.target.closest("[data-collapse]")) {
-      var l = document.querySelector(".layout");
-      l.classList.toggle("tight");
-      try { localStorage.setItem("eni-tight", l.classList.contains("tight") ? "1" : "0"); } catch (x) {}
-    }
-    if (e.target.closest("[data-burger]")) {
-      document.querySelector(".side").classList.toggle("open");
-    }
-  });
-  try {
-    if (localStorage.getItem("eni-tight") === "1") {
-      var lay = document.querySelector(".layout");
-      if (lay) { lay.classList.add("tight"); }
-    }
-  } catch (e) {}
-
-  // --------------------------------------------------------------- toasts --
-  var tray = document.querySelector(".toasts");
-  window.toast = function (msg, kind) {
-    if (!tray) { return; }
-    var el = document.createElement("div");
-    el.className = "toast " + (kind || "");
-    el.setAttribute("role", "status");
-    el.textContent = msg;
-    tray.appendChild(el);
-    setTimeout(function () {
-      el.classList.add("out");
-      setTimeout(function () { el.remove(); }, 320);
-    }, 3200);
-  };
-
-  // ------------------------------------------------------ command palette --
-  var cmdk = document.querySelector(".cmdk");
-  var scrim = document.querySelector(".scrim");
-  if (cmdk) {
-    var input = cmdk.querySelector("input");
-    var list = cmdk.querySelector("ul");
-    var items = [];
-    var sel = 0;
-
-    function collect() {
-      var out = [];
-      document.querySelectorAll(".nav a").forEach(function (a) {
-        out.push({ label: a.textContent.trim(), hint: "page", href: a.getAttribute("href") });
-      });
-      document.querySelectorAll("tbody a[href]").forEach(function (a) {
-        var row = a.closest("tr");
-        var sub = row ? (row.querySelector(".mono") || {}).textContent : "";
-        out.push({ label: a.textContent.trim(), hint: (sub || "row").trim(),
-                   href: a.getAttribute("href") });
-      });
-      out.push({ label: "Toggle light or dark", hint: "theme", act: "theme" });
-      out.push({ label: "Sign out", hint: "session", href: "/logout" });
-      return out;
-    }
-
-    function render(q) {
-      var needle = (q || "").toLowerCase();
-      items = collect().filter(function (i) {
-        return !needle || i.label.toLowerCase().indexOf(needle) > -1 ||
-               i.hint.toLowerCase().indexOf(needle) > -1;
-      }).slice(0, 40);
-      sel = 0;
-      if (!items.length) {
-        list.innerHTML = "";
-        var n = document.createElement("li");
-        n.className = "none";
-        n.textContent = "nothing matches that";
-        list.appendChild(n);
-        return;
-      }
-      list.innerHTML = "";
-      items.forEach(function (i, idx) {
-        var li = document.createElement("li");
-        if (idx === 0) { li.className = "sel"; }
-        li.setAttribute("role", "option");
-        var span = document.createElement("span");
-        span.textContent = i.label;
-        var small = document.createElement("small");
-        small.textContent = i.hint;
-        li.appendChild(span);
-        li.appendChild(small);
-        li.addEventListener("click", function () { run(i); });
-        li.addEventListener("mousemove", function () { move(idx); });
-        list.appendChild(li);
-      });
-    }
-
-    function move(n) {
-      var lis = list.querySelectorAll("li");
-      if (!lis.length) { return; }
-      sel = (n + lis.length) % lis.length;
-      lis.forEach(function (l, i) { l.className = i === sel ? "sel" : ""; });
-      lis[sel].scrollIntoView({ block: "nearest" });
-    }
-
-    function run(i) {
-      close();
-      if (i.act === "theme") {
-        setTheme(root.getAttribute("data-theme") === "light" ? "dark" : "light");
-        window.toast("Theme switched");
-        return;
-      }
-      if (i.href) { window.location.href = i.href; }
-    }
-
-    function open() {
-      cmdk.classList.add("open");
-      scrim.classList.add("open");
-      input.value = "";
-      render("");
-      setTimeout(function () { input.focus(); }, 40);
-    }
-    function close() {
-      cmdk.classList.remove("open");
-      scrim.classList.remove("open");
-    }
-
-    input.addEventListener("input", function () { render(this.value); });
-    input.addEventListener("keydown", function (e) {
-      if (e.key === "ArrowDown") { e.preventDefault(); move(sel + 1); }
-      else if (e.key === "ArrowUp") { e.preventDefault(); move(sel - 1); }
-      else if (e.key === "Enter") { e.preventDefault(); if (items[sel]) { run(items[sel]); } }
-      else if (e.key === "Escape") { close(); }
-    });
-    scrim.addEventListener("click", close);
-    document.addEventListener("click", function (e) {
-      if (e.target.closest("[data-cmdk]")) { open(); }
-    });
-    document.addEventListener("keydown", function (e) {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); open(); }
-      if (e.key === "Escape") { close(); document.querySelectorAll(".over.open")
-        .forEach(function (o) { o.classList.remove("open"); }); }
-    });
-  }
-
-  // ----------------------------------------------------------- slide-over --
-  document.addEventListener("click", function (e) {
-    var o = e.target.closest("[data-over]");
-    if (o) {
-      var panel = document.querySelector(o.getAttribute("data-over"));
-      if (panel) { panel.classList.toggle("open"); scrim.classList.toggle("open"); }
-    }
-    if (e.target.closest("[data-over-close]")) {
-      document.querySelectorAll(".over.open").forEach(function (p) { p.classList.remove("open"); });
-      scrim.classList.remove("open");
+    if (e.target.closest("[data-theme-toggle]")) {
+      setTheme(root.getAttribute("data-theme") === "light" ? "dark" : "light");
     }
   });
 
-  // -------------------------------------------------------- sortable table --
-  document.querySelectorAll("table[data-sortable] th:not(.no)").forEach(function (th, col) {
+  // ------------------------------------------------------------- count up
+  var reduced = window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.querySelectorAll("[data-count]").forEach(function (el) {
+    var target = parseFloat(el.getAttribute("data-count"));
+    var suffix = el.getAttribute("data-suffix") || "";
+    if (isNaN(target)) { return; }
+    if (reduced || target === 0) { el.textContent = target + suffix; return; }
+    var started = null, dur = 620;
+    function step(now) {
+      if (started === null) { started = now; }
+      var p = Math.min(1, (now - started) / dur);
+      var eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(target * eased) + suffix;
+      if (p < 1) { requestAnimationFrame(step); }
+    }
+    el.textContent = "0" + suffix;
+    requestAnimationFrame(step);
+  });
+
+  // -------------------------------------------------------- sortable table
+  document.querySelectorAll("table[data-sortable] th:not(.no)").forEach(function (th) {
     th.setAttribute("tabindex", "0");
+    th.setAttribute("role", "columnheader");
     function sort() {
       var table = th.closest("table");
       var body = table.querySelector("tbody");
@@ -201,14 +110,14 @@
     });
   });
 
-  // -------------------------------------------------- button loading state --
+  // ------------------------------------------------------- submit feedback
   document.querySelectorAll("form").forEach(function (f) {
     f.addEventListener("submit", function () {
       var b = f.querySelector("button[type=submit]");
       if (b && !b.dataset.busy) {
         b.dataset.busy = "1";
         b.disabled = true;
-        b.textContent = "working...";
+        b.textContent = "Working";
       }
     });
   });

@@ -1,178 +1,147 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Watchlist — ENI Monitor</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
+<head>{% include "_head.html" %}<title>Watchlist — ENI Monitor</title></head>
 <body>
-<div class="layout">
-  {% set nav = 'watch' %}
-  {% include "_shell.html" %}
+{% set nav = 'watch' %}
+{% set page_title = 'Watchlist' %}
+{% set page_sub = 'your comments · checked by hand' %}
+{% include "_shell.html" %}
 
-  <main class="main">
-    <header class="top">
-      <button class="btn icon ghost burger" data-burger aria-label="Open menu">
-        <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-      </button>
-      <div>
-        <h1>Watchlist</h1>
-        <p class="sub">find a thread, comment, paste the link, check back later.</p>
-      </div>
-      <div class="spacer"></div>
-      <button class="kbd" data-cmdk aria-label="Open command palette">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        Search <kbd>⌘K</kbd>
-      </button>
-      <button class="btn ghost" data-over="#howto">How it works</button>
-      <div class="avatar" data-tip="{{ integrations.who.label }}">{{ integrations.who.label[:2] | upper }}</div>
-    </header>
-
-    <div class="content">
-      <nav class="strip">
-        {% for key, item in integrations.items() %}
-        <span class="pill {{ 'ok' if item.ok else 'warn' }}">
-          <em>{{ item.label }}</em><small>{{ item.detail }}</small>
-        </span>
-        {% endfor %}
-      </nav>
-
-      <section class="panel">
-        <h2>Find threads</h2>
-        <div class="chips" id="chips"></div>
-        <div class="field">
-          <input id="q" placeholder=" ">
-          <label for="q">your own search — reddit is appended automatically</label>
-        </div>
-        <div class="row">
-          <button class="btn" id="qgo" type="button">
-            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-            Search Google
-          </button>
-          <span class="hint">Opens in a new tab. You read the results and pick the thread.</span>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>Add comments</h2>
-        <form method="post" action="{{ url_for('watch_add') }}">
-          <div class="field">
-            <textarea name="urls" id="urls" placeholder=" " required></textarea>
-            <label for="urls">comment permalinks, one per line</label>
-          </div>
-          <div class="field">
-            <input name="note" id="note" placeholder=" ">
-            <label for="note">what you said, or why this thread (optional)</label>
-          </div>
-          <div class="row">
-            <button class="btn primary" type="submit">
-              <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-              Add to watchlist
-            </button>
-            <span class="hint">Use the comment's own share link — it ends in the comment id, not the slug.</span>
-          </div>
-        </form>
-      </section>
-
-      <section class="panel">
-        <h2>Tracking {{ rows | length }}</h2>
-        <table data-sortable>
-          <thead>
-            <tr><th>Sub</th><th>Comment</th><th>Owner</th><th>Added</th><th>Checked</th><th>State</th><th class="no"></th></tr>
-          </thead>
-          <tbody>
-          {% for r in rows %}
-            <tr>
-              <td class="mono dim">r/{{ r.subreddit or '?' }}</td>
-              <td><a class="mono" href="https://reddit.com/r/{{ r.subreddit }}/comments/{{ r.post_id }}/-/{{ r.id }}" target="_blank" rel="noopener">{{ r.id }}</a>
-                {% if r.mentions_marker %}<span class="tag marker">&#127819;</span>{% endif %}</td>
-              <td class="dim tiny">{{ r.owner or '—' }}</td>
-              <td class="dim tiny">{{ r.created_utc | ago }}</td>
-              <td class="dim tiny">{{ r.last_seen | ago }}</td>
-              <td>{% if r.deleted %}<span class="tag bad">gone</span>
-                  <span class="dim tiny">{{ r.delete_reason }}</span>
-                  {% else %}<span class="tag good">up</span>{% endif %}</td>
-              <td>
-                <div class="acts">
-                  {% if not r.deleted %}
-                  <form method="post" action="{{ url_for('watch_verdict', cid=r.id, verdict='alive') }}"><button class="mini up">still up</button></form>
-                  <form method="post" action="{{ url_for('watch_verdict', cid=r.id, verdict='gone') }}"><button class="mini down">it's gone</button></form>
-                  {% else %}
-                  <form method="post" action="{{ url_for('watch_verdict', cid=r.id, verdict='alive') }}"><button class="mini up">it's back</button></form>
-                  {% endif %}
-                  <form method="post" action="{{ url_for('watch_drop', cid=r.id) }}"><button class="mini">drop</button></form>
-                </div>
-              </td>
-            </tr>
-          {% else %}
-            <tr><td colspan="7" class="empty">
-              <strong>Nothing tracked yet</strong>
-              Click a search above, comment on a thread, then paste the comment link in the box.
-            </td></tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </section>
-    </div>
-  </main>
-</div>
-
-<aside class="over" id="howto" aria-label="How the watchlist works">
-  <h3>How this works</h3>
-  <p class="sub dim tiny">manual checks, honest inference</p>
-  <button class="btn ghost" data-over-close style="position:absolute;top:18px;right:18px">Close</button>
-  <div style="margin-top:22px">
-    <p class="hint">
-      Open a comment link in a new tab and look at it. If the comment is there, click
-      <b>still up</b>. If it's missing or shows as removed, click <b>it's gone</b>.
-    </p>
-    <br>
-    <p class="hint">
-      Two of your comments gone on the same thread blacklists that thread. More than half
-      your comments gone in a subreddit, over at least five comments, flags the whole subreddit.
-    </p>
-    <br>
-    <p class="hint">
-      A comment that vanished under an hour is recorded as a suspected mod or filter action —
-      suspected, not proven. Reddit never tells anyone why something disappeared.
-    </p>
+<div class="wrap">
+  {% if only_stale %}
+  <div class="notice">
+    <p>Showing only comments unchecked for over {{ (stale_seconds // 3600) }} hours.</p>
+    <a class="btn" href="{{ url_for('watch') }}">Show all</a>
   </div>
-</aside>
+  {% elif stale %}
+  <div class="notice">
+    <p><b>{{ stale }}</b> overdue for a check.</p>
+    <a class="btn" href="{{ url_for('watch', stale=1) }}">Show only those</a>
+  </div>
+  {% endif %}
 
+  <section class="panel">
+    <h2>Find threads</h2>
+    <div class="chips" id="chips"></div>
+    <div class="field">
+      <label for="q">Custom search</label>
+      <input id="q" autocomplete="off" placeholder="iptv canada">
+    </div>
+    <div class="row" style="margin-top:0">
+      <button class="btn" id="qgo" type="button">Search Google</button>
+      <span class="hint">Opens a new tab. You read the results and pick the thread.</span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Add comments</h2>
+    <form method="post" action="{{ url_for('watch_add') }}">
+      <div class="field">
+        <label for="urls">Comment permalinks — one per line</label>
+        <textarea name="urls" id="urls" required
+                  placeholder="https://www.reddit.com/r/IPTV/comments/1abcdef/title/mno9876/"></textarea>
+      </div>
+      <div class="field">
+        <label for="note">Note (optional)</label>
+        <input name="note" id="note" autocomplete="off" placeholder="what you said, or why this thread">
+      </div>
+      <div class="row" style="margin-top:0">
+        <button class="btn primary" type="submit">Add to watchlist</button>
+        <span class="hint">Use the comment's own share link — it ends in the comment id,
+          not the thread slug.</span>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel flush">
+    <h2>Tracking {{ rows | length }}</h2>
+    <div class="tablewrap">
+      <table data-sortable>
+        <thead><tr><th>Sub</th><th>Comment</th><th>Owner</th><th>Added</th><th>Checked</th>
+                   <th>State</th><th class="no"></th></tr></thead>
+        <tbody>
+        {% for r in rows %}
+          <tr>
+            <td class="mono muted">r/{{ r.subreddit or '?' }}</td>
+            <td>
+              <a class="mono" target="_blank" rel="noopener"
+                 href="https://reddit.com/r/{{ r.subreddit }}/comments/{{ r.post_id }}/-/{{ r.id }}">{{ r.id }}</a>
+              {% if r.mentions_marker %}<span class="tag key">marker</span>{% endif %}
+            </td>
+            <td class="muted tiny">{{ r.owner or '—' }}</td>
+            <td class="muted tiny mono">{{ r.created_utc | ago }}</td>
+            <td class="muted tiny mono">{{ r.last_seen | ago }}</td>
+            <td>
+              {% if r.deleted %}<span class="tag bad">gone</span>
+              {% else %}<span class="tag good">up</span>{% endif %}
+            </td>
+            <td>
+              <div class="acts">
+                {% if not r.deleted %}
+                <form method="post" action="{{ url_for('watch_verdict', cid=r.id, verdict='alive') }}">
+                  <input type="hidden" name="back" value="{{ request.full_path }}">
+                  <button class="mini up">Still up</button></form>
+                <form method="post" action="{{ url_for('watch_verdict', cid=r.id, verdict='gone') }}">
+                  <input type="hidden" name="back" value="{{ request.full_path }}">
+                  <button class="mini down">Gone</button></form>
+                {% else %}
+                <form method="post" action="{{ url_for('watch_verdict', cid=r.id, verdict='alive') }}">
+                  <input type="hidden" name="back" value="{{ request.full_path }}">
+                  <button class="mini up">It's back</button></form>
+                {% endif %}
+                <form method="post" action="{{ url_for('watch_drop', cid=r.id) }}">
+                  <input type="hidden" name="back" value="{{ request.full_path }}">
+                  <button class="mini">Drop</button></form>
+              </div>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="empty">
+            <strong>Nothing tracked yet</strong>
+            Click a search above, comment on a thread, then paste the comment link.
+          </td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Method</h2>
+    <p class="hint">
+      Open a comment link, look at it, click <b style="color:var(--text)">Still up</b> or
+      <b style="color:var(--text)">Gone</b>.<br><br>
+      Two of your comments gone on the same thread blacklists that thread. More than half gone
+      in a subreddit, over at least five comments, flags the whole subreddit. A comment that
+      vanished under an hour is recorded as suspected mod or filter action — suspected, not proven.
+    </p>
+  </section>
+</div>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
 <script>
 var SAVED = ["iptv service reddit","iptv canada reddit","cheap iptv service reddit",
   "best iptv 2026 reddit","iptv firestick reddit","iptv reseller panel reddit",
   "site:reddit.com/r/IPTV recommendation"];
-
-function openGoogle(text) {
-  var q = (text || "").trim();
-  if (!q) { window.toast("Type something to search first", "bad"); return; }
-  if (q.toLowerCase().indexOf("reddit") === -1) { q += " reddit"; }
-  window.open("https://www.google.com/search?q=" + encodeURIComponent(q), "_blank", "noopener");
-  window.toast("Opened Google in a new tab");
+function openGoogle(text){
+  var q=(text||"").trim();
+  if(!q){return;}
+  if(q.toLowerCase().indexOf("reddit")===-1){q+=" reddit";}
+  window.open("https://www.google.com/search?q="+encodeURIComponent(q),"_blank","noopener");
 }
-
-var chips = document.getElementById("chips");
-SAVED.forEach(function (text) {
-  var b = document.createElement("button");
-  b.type = "button"; b.className = "chip";
-  var s1 = document.createElement("span"); s1.textContent = text;
-  var s2 = document.createElement("s"); s2.textContent = "open";
-  b.appendChild(s1); b.appendChild(s2);
-  b.addEventListener("click", function () { openGoogle(text); });
+var chips=document.getElementById("chips");
+SAVED.forEach(function(t){
+  var b=document.createElement("button");
+  b.type="button";b.className="chip";
+  var s1=document.createElement("b");s1.textContent=t;
+  var s2=document.createElement("s");s2.textContent="open";
+  b.appendChild(s1);b.appendChild(s2);
+  b.addEventListener("click",function(){openGoogle(t);});
   chips.appendChild(b);
 });
-document.getElementById("qgo").addEventListener("click", function () {
-  openGoogle(document.getElementById("q").value);
-});
-document.getElementById("q").addEventListener("keydown", function (e) {
-  if (e.key === "Enter") { e.preventDefault(); openGoogle(this.value); }
-});
+document.getElementById("qgo").addEventListener("click",function(){
+  openGoogle(document.getElementById("q").value);});
+document.getElementById("q").addEventListener("keydown",function(e){
+  if(e.key==="Enter"){e.preventDefault();openGoogle(this.value);}});
 </script>
 </body>
 </html>

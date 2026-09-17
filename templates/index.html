@@ -1,172 +1,108 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ENI Monitor</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-<style>
-.nudge{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.nudge svg{width:20px;height:20px;stroke:var(--accent);fill:none;stroke-width:1.7;
-  stroke-linecap:round;flex-shrink:0}
-.nudge p{flex:1;min-width:200px;font-size:13.5px}
-.nudge b{color:var(--accent)}
-.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
-.kv div{padding:14px 16px;border-radius:var(--r);border:1px solid var(--line);
-  background:var(--surface-2)}
-.kv s{text-decoration:none;display:block;font-size:9.5px;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--faint);font-weight:700;margin-bottom:7px}
-.kv i{font-style:normal;font-family:var(--mono);font-size:19px;font-weight:650}
-.kv i.hot{color:var(--accent)}
-.kv i.bad{color:var(--red)}
-.agg{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
-.agg:last-child{border-bottom:none}
-.agg .nm{font-family:var(--mono);font-size:12.5px;min-width:130px}
-.agg .bar{flex:1;height:6px;border-radius:99px;background:var(--surface-2);
-  overflow:hidden;border:1px solid var(--line)}
-.agg .bar i{display:block;height:100%;border-radius:99px;
-  background:linear-gradient(90deg,var(--red),#f0b4b4)}
-.agg .pc{font-family:var(--mono);font-size:12px;color:var(--red);min-width:40px;text-align:right}
-</style>
-</head>
+<head>{% include "_head.html" %}<title>Dashboard — ENI Monitor</title></head>
 <body>
-<div class="layout">
-  {% set nav = 'dash' %}
-  {% include "_shell.html" %}
+{% set nav = 'dash' %}
+{% set page_title = 'Dashboard' %}
+{% set page_sub = 'posts · comments · survival' %}
+{% include "_shell.html" %}
 
-  <main class="main">
-    <header class="top">
-      <button class="btn icon ghost burger" data-burger aria-label="Open menu">
-        <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-      </button>
-      <div>
-        <h1>Dashboard</h1>
-        <p class="sub">posts, comments, survival. live view.</p>
-      </div>
-      <div class="spacer"></div>
-      <button class="kbd" data-cmdk aria-label="Open command palette">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        Search <kbd>⌘K</kbd>
-      </button>
-      <form method="post" action="{{ url_for('sync') }}">
-        <button class="btn primary" type="submit">
-          <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5"/></svg>
-          Refresh
-        </button>
-      </form>
-      <div class="avatar" data-tip="{{ integrations.who.label }}">{{ integrations.who.label[:2] | upper }}</div>
-    </header>
+<div class="wrap">
+  {% if stale %}
+  <div class="notice">
+    <p><b>{{ stale }}</b> comment{{ 's' if stale != 1 }} unchecked for over {{ stale_hours }} hours.
+       The blacklist only learns from checks you make.</p>
+    <a class="btn" href="{{ url_for('watch', stale=1) }}">Check now</a>
+  </div>
+  {% endif %}
 
-    <div class="content">
-      {% if stale %}
-      <div class="banner marker nudge">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-        <p><b>{{ stale }}</b> comment{{ 's' if stale != 1 }} not checked in over {{ stale_hours }} hours.
-           The blacklist only learns from checks you actually make.</p>
-        <a class="btn" href="{{ url_for('watch', stale=1) }}">Check them now</a>
-      </div>
-      {% endif %}
+  <section class="grid">
+    <div class="card"><b>Posts</b><i data-count="{{ stats.posts }}">0</i></div>
+    <div class="card"><b>Comments</b><i data-count="{{ stats.comments }}">0</i></div>
+    <div class="card"><b>Ours</b><i data-count="{{ tracking.total_comments_made }}">0</i></div>
+    <div class="card {{ 'danger' if stats.deleted }}"><b>Deleted</b><i data-count="{{ stats.deleted }}">0</i></div>
+  </section>
 
-      <nav class="strip">
-        {% for key, item in integrations.items() %}
-        <span class="pill {{ 'ok' if item.ok else 'warn' }}">
-          <em>{{ item.label }}</em><small>{{ item.detail }}</small>
-        </span>
-        {% endfor %}
-      </nav>
+  <section class="grid">
+    <div class="card key"><b>Ranked 01</b><i data-count="{{ tracking.rank_1_count }}">0</i></div>
+    <div class="card"><b>Ranked 02—05</b><i data-count="{{ tracking.rank_medium_count }}">0</i></div>
+    <div class="card"><b>Ranked 06+</b><i data-count="{{ tracking.rank_low_count }}">0</i></div>
+    <div class="card"><b>Threads scraped</b><i data-count="{{ longterm.total_scrapes }}">0</i></div>
+  </section>
 
-      <section class="cards">
-        <div class="stat"><b>Posts</b><i>{{ stats.posts }}</i></div>
-        <div class="stat"><b>Comments</b><i>{{ stats.comments }}</i></div>
-        <div class="stat"><b>Ours</b><i>{{ tracking.total_comments_made }}</i></div>
-        <div class="stat {{ 'alarm' if stats.deleted }}"><b>Deleted</b><i>{{ stats.deleted }}</i></div>
-      </section>
-
-      <section class="cards">
-        <div class="stat"><b>Ranked #1</b><i>{{ tracking.rank_1_count }}</i></div>
-        <div class="stat"><b>Ranked 2–5</b><i>{{ tracking.rank_medium_count }}</i></div>
-        <div class="stat"><b>Ranked 6+</b><i>{{ tracking.rank_low_count }}</i></div>
-        <div class="stat"><b>Threads scraped</b><i>{{ longterm.total_scrapes }}</i></div>
-      </section>
-
-      <section class="panel">
-        <h2>Long-term performance</h2>
-        <div class="kv">
-          <div><s>Period</s><i>all time</i></div>
-          <div><s>Days running</s><i>{{ longterm.days_running }}</i></div>
-          <div><s>Posts tracked</s><i>{{ longterm.total_posts_tracked }}</i></div>
-          <div><s>Comments tracked</s><i>{{ longterm.total_comments_tracked }}</i></div>
-          <div><s>Average rank</s><i class="hot">{{ longterm.avg_rank or '—' }}</i></div>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>Aggressive metrics</h2>
-        <div class="kv" style="margin-bottom:18px">
-          <div><s>Total removed</s><i class="bad">{{ deleted.total_deleted }}</i></div>
-          <div><s>Deletion rate</s><i class="bad">{{ (deleted.deletion_rate * 100) | round(0) | int }}%</i></div>
-          <div><s>Subs measured</s><i>{{ deleted.aggressive_subreddits | length }}</i></div>
-        </div>
-        {% for s in deleted.aggressive_subreddits[:5] %}
-        <div class="agg">
-          <span class="nm">r/{{ s.subreddit }}</span>
-          <div class="bar"><i style="width:{{ (s.aggression_score * 100) | round(0) | int }}%"></i></div>
-          <span class="pc">{{ (s.aggression_score * 100) | round(0) | int }}%</span>
-        </div>
-        {% else %}
-        <p class="hint">Nothing removed yet. Numbers appear once comments start disappearing.</p>
-        {% endfor %}
-        {% if deleted.aggressive_subreddits %}
-        <div class="row"><a class="btn ghost" href="{{ url_for('deletions') }}">Full deletion report</a></div>
-        {% endif %}
-      </section>
-
-      <section class="panel">
-        <h2>Ranked threads</h2>
-        <table data-sortable>
-          <thead>
-            <tr><th class="no rank">#</th><th>Sub</th><th>Author</th><th>Title</th><th class="num">Score</th></tr>
-          </thead>
-          <tbody>
-          {% for row in rows %}
-            <tr>
-              <td class="rank">{{ loop.index }}</td>
-              <td class="mono dim">r/{{ row.subreddit }}</td>
-              <td class="dim tiny">u/{{ row.author }}</td>
-              <td>
-                <a href="{{ url_for('post_view', pid=row.id) }}">{{ row.title[:88] }}</a>
-                {% if row.marker_hits %}<span class="tag marker">&#127819;</span>{% endif %}
-                {% if row.blacklisted %}<span class="tag bad">blacklisted</span>{% endif %}
-                {% if row.gone %}<span class="tag bad">{{ row.gone }} gone</span>{% endif %}
-                {% if row.ours %}<span class="tag good">{{ row.ours }} ours</span>{% endif %}
-              </td>
-              <td class="num">{{ row.rank_score | round(0) | int }}</td>
-            </tr>
-          {% else %}
-            <tr><td colspan="5" class="empty">
-              <strong>Nothing tracked yet</strong>
-              Find a thread, comment on it, then <a href="{{ url_for('watch') }}">add the link to your watchlist</a>.
-            </td></tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </section>
-
-      <section class="panel">
-        <h2>Recent activity</h2>
-        <ul class="feed">
-        {% for l in logs %}
-          <li><span class="t">{{ l.ts | ts }}</span><span class="lvl {{ l.level | lower }}">{{ l.level }}</span><span>{{ l.message }}</span></li>
-        {% else %}
-          <li class="empty"><strong>Quiet</strong>Nothing has happened yet.</li>
-        {% endfor %}
-        </ul>
-      </section>
+  <section class="panel">
+    <h2>Long-term performance</h2>
+    <div class="kv">
+      <div><s>Period</s><i>ALL TIME</i></div>
+      <div><s>Days running</s><i data-count="{{ longterm.days_running }}">0</i></div>
+      <div><s>Posts tracked</s><i data-count="{{ longterm.total_posts_tracked }}">0</i></div>
+      <div><s>Comments tracked</s><i data-count="{{ longterm.total_comments_tracked }}">0</i></div>
+      <div><s>Average rank</s><i class="key">{{ longterm.avg_rank or '—' }}</i></div>
     </div>
-  </main>
+  </section>
+
+  <section class="panel">
+    <h2>Aggressive metrics</h2>
+    <div class="kv" style="margin-bottom:20px">
+      <div><s>Total removed</s><i class="bad" data-count="{{ deleted.total_deleted }}">0</i></div>
+      <div><s>Deletion rate</s><i class="bad" data-count="{{ (deleted.deletion_rate * 100) | round(0) | int }}" data-suffix="%">0%</i></div>
+      <div><s>Subs measured</s><i data-count="{{ deleted.aggressive_subreddits | length }}">0</i></div>
+    </div>
+    {% for s in deleted.aggressive_subreddits[:5] %}
+    <div class="meter" style="padding:9px 0;border-bottom:1px solid var(--line)">
+      <span class="mono" style="min-width:140px">r/{{ s.subreddit }}</span>
+      <div class="bar danger"><i style="width:{{ (s.aggression_score * 100) | round(0) | int }}%"></i></div>
+      <b style="color:var(--red)">{{ (s.aggression_score * 100) | round(0) | int }}%</b>
+    </div>
+    {% else %}
+    <p class="hint">Nothing removed yet. Numbers appear once comments start disappearing.</p>
+    {% endfor %}
+    {% if deleted.aggressive_subreddits %}
+    <div class="row"><a class="btn" href="{{ url_for('deletions') }}">Full report</a></div>
+    {% endif %}
+  </section>
+
+  <section class="panel flush">
+    <h2>Ranked threads</h2>
+    <div class="tablewrap">
+      <table data-sortable>
+        <thead><tr><th class="no rank">#</th><th>Sub</th><th>Author</th><th>Title</th><th class="num">Score</th></tr></thead>
+        <tbody>
+        {% for row in rows %}
+          <tr>
+            <td class="rank">{{ '%02d' % loop.index }}</td>
+            <td class="mono muted">r/{{ row.subreddit }}</td>
+            <td class="muted tiny">u/{{ row.author }}</td>
+            <td>
+              <a href="{{ url_for('post_view', pid=row.id) }}">{{ row.title[:82] }}</a>
+              {% if row.marker_hits %}<span class="tag key">marker</span>{% endif %}
+              {% if row.blacklisted %}<span class="tag bad">blacklisted</span>{% endif %}
+              {% if row.gone %}<span class="tag bad">{{ row.gone }} gone</span>{% endif %}
+              {% if row.ours %}<span class="tag good">{{ row.ours }} ours</span>{% endif %}
+            </td>
+            <td class="num">{{ row.rank_score | round(0) | int }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="empty">
+            <strong>Nothing tracked yet</strong>
+            Comment on a thread, then <a href="{{ url_for('watch') }}">add the link to your watchlist</a>.
+          </td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Activity</h2>
+    <ul class="feed">
+    {% for l in logs %}
+      <li><span class="t">{{ l.ts | ts }}</span><span class="lvl {{ l.level | lower }}">{{ l.level }}</span><span>{{ l.message }}</span></li>
+    {% else %}
+      <li class="empty"><strong>Quiet</strong>Nothing has happened yet.</li>
+    {% endfor %}
+    </ul>
+  </section>
 </div>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
