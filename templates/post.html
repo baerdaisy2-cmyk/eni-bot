@@ -6,58 +6,73 @@
 {% set nav = 'dash' %}
 {% set page_title = 'Thread' %}
 {% set page_slug = 'thread' %}
-{% set page_sub = 'r/' ~ post.subreddit %}
+{% set page_sub = 'r/' ~ (post.subreddit or '?') %}
 {% include "_shell.html" %}
 
   <div class="view">
+    {% if post.blacklisted %}
+    <div class="notice bad">
+      <p><b>Node blacklisted.</b> Two or more of your comments were removed here.
+         Ranking is zeroed and this thread is excluded.</p>
+    </div>
+    {% endif %}
+    {% if has_marker %}
+    <div class="notice"><p>A comment in this thread carries your marker.</p></div>
+    {% endif %}
+
     <section class="panel">
       <h2>Target thread</h2>
       <h3 style="margin-bottom:9px">{{ post.title }}</h3>
       <div class="item" style="border:0;padding:0">
         <div class="body">
           <div class="meta">
-            <span>r/{{ post.subreddit }}</span><span>u/{{ post.author }}</span>
-            <span>{{ post.upvotes }} up</span><span>{{ post.comment_count }} comments</span>
-            {% if post.blacklisted %}<span class="tag-pill bad">blacklisted</span>{% endif %}
+            <span>r/{{ post.subreddit or '?' }}</span>
+            <span>u/{{ post.author or '?' }}</span>
+            <span>{{ post.score or 0 }} up</span>
+            <span>{{ post.num_comments or 0 }} comments</span>
+            <span>{{ post.created_utc | ago }} old</span>
           </div>
         </div>
-        <a class="btn" href="{{ post.url }}" target="_blank" rel="noopener">Open on Reddit ↗</a>
+        {% if post.permalink %}
+        <a class="btn" href="{{ post.permalink }}" target="_blank" rel="noopener">Open on Reddit ↗</a>
+        {% endif %}
       </div>
+      {% if post.body %}<div class="txt" style="margin-top:14px;white-space:pre-wrap">{{ post.body }}</div>{% endif %}
     </section>
 
     <section class="panel">
       <h2>Draft generator</h2>
-      {% if generator_ready %}
-      <form method="post" action="{{ url_for('generate', pid=post.id) }}">
-        <div class="row" style="margin-top:0">
-          <button class="btn primary" type="submit">Generate draft</button>
-          <span class="hint">Draft only. You review it, you post it, you register the link.</span>
-        </div>
-      </form>
-      {% if draft %}<pre class="out">{{ draft }}</pre>{% endif %}
-      {% else %}
-      <div class="notice warn">
-        <p><b>No formula loaded.</b> The generator needs your comment formula before it
-           can produce anything. Until then this stays disabled rather than inventing
-           text in your name.</p>
+      <div class="row" style="margin-top:0">
+        <button class="btn primary" id="gen" {{ 'disabled' if not can_generate }}>Generate draft</button>
+        <span class="hint">
+          {% if can_generate %}Draft only. You review it, you post it, you register the link.
+          {% else %}No formula loaded. The generator stays off rather than inventing text
+          in your name.{% endif %}
+        </span>
       </div>
-      {% endif %}
+      <pre class="out" id="out" hidden></pre>
     </section>
 
     <section class="panel">
       <h2>Comments — {{ comments | length }}</h2>
       {% for c in comments %}
-      <div class="item {{ 'gone' if c.is_deleted }}">
+      <div class="item {{ 'gone' if c.deleted }}">
         <div class="pos">{{ '%02d' % loop.index }}</div>
         <div class="body">
           <div class="meta">
             <b>u/{{ c.author }}</b>
-            <span style="color:var(--cyan)">{{ c.upvotes }} up</span>
+            <span style="color:var(--cyan)">{{ c.score or 0 }} up</span>
+            <span>{{ c.created_utc | ts }}</span>
             {% if c.is_ours %}<span class="tag-pill ok">ours</span>{% endif %}
-            {% if c.has_marker %}<span class="tag-pill key">marker</span>{% endif %}
-            {% if c.is_deleted %}<span class="tag-pill bad">removed</span>{% endif %}
+            {% if c.mentions_marker %}<span class="tag-pill key">marker</span>{% endif %}
+            {% if c.deleted %}<span class="tag-pill bad">removed</span>{% endif %}
           </div>
           <div class="txt">{{ c.body }}</div>
+          {% if c.deleted %}
+          <div class="mono tiny" style="margin-top:6px;color:var(--red)">
+            gone by {{ c.deleted_at | ts }} · {{ c.delete_reason }}
+          </div>
+          {% endif %}
         </div>
       </div>
       {% else %}
@@ -68,5 +83,31 @@
 </main>
 </div>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
+<script>
+(function () {
+  var gen = document.getElementById('gen');
+  if (!gen || gen.disabled) { return; }
+  gen.addEventListener('click', function () {
+    gen.disabled = true;
+    gen.textContent = 'Executing';
+    fetch('{{ url_for("generate", pid=post.id) }}', { method: 'POST' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var out = document.getElementById('out');
+        out.hidden = false;
+        out.textContent = d.text || d.error || 'no response';
+        gen.disabled = false;
+        gen.textContent = 'Generate draft';
+      })
+      .catch(function (e) {
+        var out = document.getElementById('out');
+        out.hidden = false;
+        out.textContent = 'request failed: ' + e;
+        gen.disabled = false;
+        gen.textContent = 'Generate draft';
+      });
+  });
+})();
+</script>
 </body>
 </html>

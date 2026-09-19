@@ -10,19 +10,35 @@
 {% include "_shell.html" %}
 
   <div class="view">
-    {% if note %}<div class="notice"><p>{{ note }}</p></div>{% endif %}
+    {% if stale and not only_stale %}
+    <div class="notice warn">
+      <p><b>{{ stale }}</b> target{{ 's' if stale != 1 }} unverified for over
+         {{ (stale_seconds // 3600) }}h. Survival data only moves when you verify.</p>
+      <a class="btn" href="{{ url_for('watch', stale=1) }}">Show only those</a>
+    </div>
+    {% elif only_stale %}
+    <div class="notice">
+      <p>Showing unverified targets only.</p>
+      <a class="btn ghost" href="{{ url_for('watch') }}">Show all</a>
+    </div>
+    {% endif %}
 
     <section class="panel">
-      <h2>Register target</h2>
+      <h2>Register targets</h2>
       <form method="post" action="{{ url_for('watch_add') }}">
         <div class="field">
-          <label for="link">Comment permalink</label>
-          <input name="link" id="link" required autocomplete="off" spellcheck="false"
-                 placeholder="https://reddit.com/r/.../comments/.../_/abc123/">
+          <label for="urls">Comment permalinks — one per line</label>
+          <textarea name="urls" id="urls" required spellcheck="false"
+                    placeholder="https://reddit.com/r/IPTV/comments/abc123/title/def456/"></textarea>
+        </div>
+        <div class="field">
+          <label for="note">Note (optional)</label>
+          <input name="note" id="note" autocomplete="off"
+                 placeholder="what you said, or the thread topic">
         </div>
         <div class="row" style="margin-top:0">
           <button class="btn primary" type="submit">Register</button>
-          <span class="hint">Post the comment on Reddit yourself, then paste the link here.
+          <span class="hint">Post the comment on Reddit yourself, then paste the link.
             VANTA never posts.</span>
         </div>
       </form>
@@ -31,45 +47,51 @@
     <section class="panel">
       <h2>Search vectors</h2>
       <div class="chips">
-        {% for s in searches %}
-        <a class="chip" href="{{ s.url }}" target="_blank" rel="noopener">
-          <b>{{ s.label }}</b><s>open ↗</s>
-        </a>
-        {% endfor %}
+        <a class="chip" target="_blank" rel="noopener"
+           href="https://www.google.com/search?q=site:reddit.com+IPTV+best+service">
+          <b>IPTV best service</b><s>open ↗</s></a>
+        <a class="chip" target="_blank" rel="noopener"
+           href="https://www.google.com/search?q=site:reddit.com+IPTV+recommendation">
+          <b>IPTV recommendation</b><s>open ↗</s></a>
+        <a class="chip" target="_blank" rel="noopener"
+           href="https://www.google.com/search?q=site:reddit.com/r/IPTV&tbs=qdr:w">
+          <b>r/IPTV this week</b><s>open ↗</s></a>
+        <a class="chip" target="_blank" rel="noopener"
+           href="https://www.google.com/search?q=site:reddit.com+which+IPTV+should+i+get">
+          <b>which should I get</b><s>open ↗</s></a>
       </div>
-      <p class="hint">Opens Google restricted to Reddit. Find a thread, comment, register it above.</p>
+      <p class="hint">Google restricted to Reddit. Find a thread, comment, register it above.</p>
     </section>
 
     <section class="panel flush">
-      <h2>Registry — {{ items | length }}{% if request.args.get('stale') %} · unverified only{% endif %}</h2>
+      <h2>Registry — {{ rows | length }}</h2>
       <div class="scroll">
         <table data-sortable>
           <thead><tr>
-            <th class="no idx">#</th><th>Node</th><th>Comment</th>
-            <th class="num">Age</th><th>State</th><th class="no"></th>
+            <th class="no idx">#</th><th>Node</th><th>Comment</th><th>Operator</th>
+            <th class="num">Last seen</th><th>State</th><th class="no"></th>
           </tr></thead>
           <tbody>
-          {% for c in items %}
+          {% for c in rows %}
+            {% set link = 'https://reddit.com/r/' ~ (c.subreddit or 'all') ~ '/comments/' ~ c.post_id ~ '/_/' ~ c.id ~ '/' %}
             <tr>
               <td class="idx">{{ '%02d' % loop.index }}</td>
               <td class="mono muted">r/{{ c.subreddit or '?' }}</td>
               <td>
-                <a href="{{ c.permalink }}" target="_blank" rel="noopener">{{ (c.body or 'no preview')[:72] }}</a>
-                {% if c.has_marker %}<span class="tag-pill key">marker</span>{% endif %}
+                <a href="{{ link }}" target="_blank" rel="noopener">{{ (c.body or 'no preview')[:64] }}</a>
+                {% if c.mentions_marker %}<span class="tag-pill key">marker</span>{% endif %}
               </td>
-              <td class="num faint">{{ c.age_hours }}h</td>
+              <td class="mono faint tiny">{{ c.owner or '—' }}</td>
+              <td class="num faint">{{ c.last_seen | ago }}</td>
               <td>
-                {% if c.is_deleted %}
-                  <span class="tag-pill bad">compromised</span>
-                {% elif c.last_checked %}
-                  <span class="tag-pill ok">active</span>
-                {% else %}
+                {% if c.deleted %}<span class="tag-pill bad">compromised</span>
+                {% elif c.last_seen and (now - c.last_seen) > stale_seconds %}
                   <span class="tag-pill warn">unverified</span>
-                {% endif %}
+                {% else %}<span class="tag-pill ok">active</span>{% endif %}
               </td>
               <td>
                 <div class="acts">
-                  <form method="post" action="{{ url_for('watch_verdict', cid=c.id, verdict='up') }}">
+                  <form method="post" action="{{ url_for('watch_verdict', cid=c.id, verdict='alive') }}">
                     <button class="mini up" type="submit">Up</button>
                   </form>
                   <form method="post" action="{{ url_for('watch_verdict', cid=c.id, verdict='gone') }}">
@@ -82,9 +104,9 @@
               </td>
             </tr>
           {% else %}
-            <tr><td colspan="6" class="empty">
+            <tr><td colspan="7" class="empty">
               <strong>REGISTRY EMPTY</strong>
-              Nothing is being tracked. Paste your first comment link above.
+              Nothing tracked. Paste your first comment link above.
             </td></tr>
           {% endfor %}
           </tbody>

@@ -11,7 +11,7 @@
 
   <div class="view">
     <section class="panel flush">
-      <h2>Node scorecard — {{ subs | length }}</h2>
+      <h2>Node scorecard — {{ table | length }}</h2>
       <div class="scroll">
         <table data-sortable>
           <thead><tr>
@@ -19,31 +19,30 @@
             <th class="num">Lost</th><th>Survival</th><th>Verdict</th>
           </tr></thead>
           <tbody>
-          {% for s in subs %}
+          {% for s in table %}
             <tr>
               <td class="idx">{{ '%02d' % loop.index }}</td>
-              <td class="mono">r/{{ s.subreddit }}</td>
+              <td class="mono">r/{{ s.sub }}
+                {% if s.flagged %}<span class="tag-pill bad">blacklisted</span>{% endif %}
+              </td>
               <td class="num faint">{{ s.total }}</td>
-              <td class="num" style="color:{{ 'var(--red)' if s.deleted else 'var(--faint)' }}">{{ s.deleted }}</td>
+              <td class="num" style="color:{{ 'var(--red)' if s.gone else 'var(--faint)' }}">{{ s.gone }}</td>
               <td>
                 <div class="meter">
-                  <div class="bar {{ 'ok' if s.survival_rate >= 0.8 else ('bad' if s.survival_rate < 0.5 else '') }}">
-                    <i style="width:{{ (s.survival_rate * 100) | round(0) | int }}%"></i>
+                  <div class="bar {{ 'ok' if s.tone == 'good' else ('bad' if s.tone == 'bad' else '') }}">
+                    <i style="width:{{ s.rate }}%"></i>
                   </div>
-                  <b>{{ (s.survival_rate * 100) | round(0) | int }}%</b>
+                  <b>{{ s.rate }}%</b>
                 </div>
               </td>
               <td>
-                {% if s.total < 5 %}<span class="tag-pill">insufficient data</span>
-                {% elif s.survival_rate >= 0.8 %}<span class="tag-pill ok">friendly</span>
-                {% elif s.survival_rate >= 0.5 %}<span class="tag-pill warn">mixed</span>
-                {% else %}<span class="tag-pill bad">hostile</span>{% endif %}
+                <span class="tag-pill {{ 'ok' if s.tone == 'good' else ('bad' if s.tone == 'bad' else ('warn' if s.tone == 'warn' else '')) }}">{{ s.verdict }}</span>
               </td>
             </tr>
           {% else %}
             <tr><td colspan="6" class="empty">
               <strong>NO NODES</strong>
-              Register comments under Targets and verify them. Verdicts need 5 data points.
+              Register comments under Targets and verify them.
             </td></tr>
           {% endfor %}
           </tbody>
@@ -53,8 +52,8 @@
 
     <div class="notice">
       <p><b>How verdicts work.</b> Survival is comments still live divided by comments
-         posted, per node. Under 5 data points the verdict reads <b>insufficient data</b>
-         — a single removal out of two is noise, not a pattern.</p>
+         posted, per node. Under <b>{{ minimum }}</b> data points the verdict reads
+         <b>too few to judge</b> — one removal out of two is noise, not a pattern.</p>
     </div>
   </div>
 </main>

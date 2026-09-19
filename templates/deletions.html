@@ -11,10 +11,10 @@
 
   <div class="view">
     <section class="metrics">
-      <div class="metric red"><b>Total removed</b><i data-count="{{ deleted.total_deleted }}">0</i></div>
-      <div class="metric amber"><b>Breach rate</b><i data-count="{{ (deleted.deletion_rate * 100) | round(0) | int }}" data-suffix="%">0%</i></div>
-      <div class="metric red"><b>Sub 1h</b><i data-count="{{ deleted.fast_removals }}">0</i><small>filter suspected</small></div>
-      <div class="metric"><b>Hostile nodes</b><i data-count="{{ deleted.aggressive_subreddits | length }}">0</i></div>
+      <div class="metric red"><b>Total removed</b><i data-count="{{ stats.total_deleted }}">0</i></div>
+      <div class="metric amber"><b>Breach rate</b><i data-count="{{ (stats.deletion_rate * 100) | round(0) | int }}" data-suffix="%">0%</i></div>
+      <div class="metric red"><b>Sub 1h</b><i data-count="{{ fast }}">0</i><small>filter suspected</small></div>
+      <div class="metric"><b>Nodes seen</b><i data-count="{{ stats.aggressive_subreddits | length }}">0</i></div>
     </section>
 
     <section class="panel flush">
@@ -22,16 +22,16 @@
       <div class="scroll">
         <table data-sortable>
           <thead><tr>
-            <th class="no idx">#</th><th>Node</th><th class="num">Posted</th>
+            <th class="no idx">#</th><th>Node</th><th class="num">Seen</th>
             <th class="num">Lost</th><th>Aggression</th>
           </tr></thead>
           <tbody>
-          {% for s in deleted.aggressive_subreddits %}
+          {% for s in stats.aggressive_subreddits %}
             <tr>
               <td class="idx">{{ '%02d' % loop.index }}</td>
               <td class="mono">r/{{ s.subreddit }}</td>
               <td class="num faint">{{ s.total }}</td>
-              <td class="num" style="color:var(--red)">{{ s.deleted }}</td>
+              <td class="num" style="color:{{ 'var(--red)' if s.deletions else 'var(--faint)' }}">{{ s.deletions }}</td>
               <td>
                 <div class="meter">
                   <div class="bar bad"><i style="width:{{ (s.aggression_score * 100) | round(0) | int }}%"></i></div>
@@ -41,7 +41,7 @@
             </tr>
           {% else %}
             <tr><td colspan="5" class="empty">
-              <strong>NO BREACHES</strong>
+              <strong>NO DATA</strong>
               Nothing removed. Either the surface is clean or nothing has been verified yet.
             </td></tr>
           {% endfor %}
@@ -51,22 +51,23 @@
     </section>
 
     <section class="panel flush">
-      <h2>Breach log — {{ deleted.recent | length }}</h2>
+      <h2>Breach log — {{ recent | length }}</h2>
       <div class="scroll">
         <table data-sortable>
           <thead><tr>
-            <th class="no idx">#</th><th>Node</th><th>Content</th>
-            <th class="num">Lifespan</th><th>Assessment</th>
+            <th class="no idx">#</th><th>Node</th><th>Operator</th>
+            <th class="num">Removed</th><th>Assessment</th>
           </tr></thead>
           <tbody>
-          {% for d in deleted.recent %}
+          {% for d in recent %}
             <tr>
               <td class="idx">{{ '%02d' % loop.index }}</td>
               <td class="mono muted">r/{{ d.subreddit or '?' }}</td>
-              <td class="faint">{{ (d.body or 'no preview')[:68] }}</td>
-              <td class="num">{{ d.lifespan_hours if d.lifespan_hours is not none else '—' }}{{ 'h' if d.lifespan_hours is not none }}</td>
+              <td class="faint tiny">{{ d.owner or '—' }}</td>
+              <td class="num faint">{{ d.deleted_at | ago }}</td>
               <td>
-                {% if d.fast %}<span class="tag-pill bad">filter suspected</span>
+                {% if d.delete_reason == 'mod_or_filter_suspected' %}
+                  <span class="tag-pill bad">filter suspected</span>
                 {% else %}<span class="tag-pill">cause unknown</span>{% endif %}
               </td>
             </tr>
@@ -80,8 +81,8 @@
 
     <div class="notice">
       <p>Reddit never reports why a comment disappears. Removal inside one hour is
-         <b>consistent with</b> an automated filter, which is not the same as proof.
-         Every label here says suspected for that reason.</p>
+         <b>consistent with</b> an automated filter, which is not proof. A node is only
+         judged after <b>{{ minimum }}</b> data points.</p>
     </div>
   </div>
 </main>

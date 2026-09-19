@@ -10,10 +10,19 @@
 {% include "_shell.html" %}
 
   <div class="view">
+    <div class="chips">
+      <a class="chip {{ 'hot' if not level }}" href="{{ url_for('logs_view') }}">
+        <b>ALL</b><s>{{ counts.values() | sum }}</s></a>
+      {% for lv in ['INFO','WARN','ERROR'] %}
+      <a class="chip {{ 'hot' if level == lv }}" href="{{ url_for('logs_view', level=lv) }}">
+        <b>{{ lv }}</b><s>{{ counts.get(lv, 0) }}</s></a>
+      {% endfor %}
+    </div>
+
     <section class="panel">
-      <h2>Live stream — {{ logs | length }} events</h2>
+      <h2>Live stream — {{ rows | length }} events</h2>
       <div class="console" style="max-height:440px">
-        {% for l in logs | reverse %}
+        {% for l in rows | reverse %}
         <div class="ln">
           <span class="ts">{{ l.ts | ts }}</span>
           <span class="tag {{ l.level | lower }}">[{{ l.level }}]</span>
@@ -33,22 +42,26 @@
       <h2>Structured events</h2>
       <div class="scroll">
         <table data-sortable>
-          <thead><tr><th class="no idx">#</th><th>Time</th><th>Level</th><th>Event</th><th class="no">Context</th></tr></thead>
+          <thead><tr>
+            <th class="no idx">#</th><th>Time</th><th>Level</th><th>Actor</th>
+            <th>Event</th><th class="no">Context</th>
+          </tr></thead>
           <tbody>
-          {% for l in logs | reverse %}
+          {% for l in rows %}
             <tr>
               <td class="idx">{{ '%02d' % loop.index }}</td>
               <td class="mono faint">{{ l.ts | ts }}</td>
               <td><span class="lvl {{ l.level | lower }}">{{ l.level }}</span></td>
+              <td class="mono faint tiny">{{ l.actor }}</td>
               <td>{{ l.message }}</td>
               <td>
-                {% if l.context %}
+                {% if l.context and l.context != '{}' %}
                 <details><summary>context</summary><pre class="out">{{ l.context }}</pre></details>
                 {% else %}<span class="faint tiny">—</span>{% endif %}
               </td>
             </tr>
           {% else %}
-            <tr><td colspan="5" class="empty"><strong>NO EVENTS</strong>Nothing logged yet.</td></tr>
+            <tr><td colspan="6" class="empty"><strong>NO EVENTS</strong>Nothing logged yet.</td></tr>
           {% endfor %}
           </tbody>
         </table>

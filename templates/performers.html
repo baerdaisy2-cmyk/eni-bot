@@ -18,34 +18,39 @@
     </section>
 
     <section class="panel flush">
-      <h2>Leaderboard</h2>
+      <h2>Leaderboard — {{ people | length }}</h2>
       <div class="scroll">
         <table data-sortable>
           <thead><tr>
             <th class="no idx">#</th><th>Operator</th><th class="num">Made</th>
-            <th class="num">Rank 01</th><th class="num">Lost</th><th>Survival</th>
+            <th class="num">Rank 01</th><th class="num">Age</th><th>Survival</th>
           </tr></thead>
           <tbody>
-          {% for p in performers %}
+          {% for p in people %}
             <tr>
               <td class="idx">{{ '%02d' % loop.index }}</td>
-              <td class="mono">{{ p.owner }}</td>
-              <td class="num">{{ p.made }}</td>
-              <td class="num" style="color:var(--green)">{{ p.rank_1 }}</td>
-              <td class="num" style="color:{{ 'var(--red)' if p.deleted else 'var(--faint)' }}">{{ p.deleted }}</td>
+              <td>
+                <span style="display:inline-flex;align-items:center;gap:9px">
+                  <img class="av" src="{{ p.avatar }}" alt="" loading="lazy">
+                  <span class="mono">{{ p.username }}</span>
+                </span>
+              </td>
+              <td class="num">{{ p.comments_made }}</td>
+              <td class="num" style="color:var(--green)">{{ p.rank_1_hits }}</td>
+              <td class="num faint">{% if p.account_age_days %}{{ p.account_age_days }}d{% else %}—{% endif %}</td>
               <td>
                 <div class="meter">
-                  <div class="bar {{ 'ok' if p.survival_rate >= 0.8 else ('bad' if p.survival_rate < 0.5 else '') }}">
-                    <i style="width:{{ (p.survival_rate * 100) | round(0) | int }}%"></i>
+                  <div class="bar {{ 'ok' if p.survival_rate >= 80 else ('bad' if p.survival_rate < 50 else '') }}">
+                    <i style="width:{{ p.survival_rate }}%"></i>
                   </div>
-                  <b>{{ (p.survival_rate * 100) | round(0) | int }}%</b>
+                  <b>{{ p.survival_rate }}%</b>
                 </div>
               </td>
             </tr>
           {% else %}
             <tr><td colspan="6" class="empty">
               <strong>NO OPERATORS</strong>
-              Stats appear once comments are registered and verified.
+              Stats appear once comments are registered.
             </td></tr>
           {% endfor %}
           </tbody>

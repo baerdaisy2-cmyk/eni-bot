@@ -1,4 +1,8 @@
-{% set scr = integrations.scraper %}
+{% set ints = integrations | default({}) %}
+{% set scr = ints.get('scraper', {}) if ints else {} %}
+{% set who = ints.get('who', {}) if ints else {} %}
+{% set store = ints.get('store', {}) if ints else {} %}
+{% set whoname = who.get('label') or 'local' %}
 <aside class="rail">
   <a class="logo" href="{{ url_for('index') }}">
     <svg viewBox="0 0 28 28" aria-hidden="true">
@@ -49,7 +53,7 @@
       <span>Console</span>
     </a>
     <a href="{{ url_for('health') }}" class="{{ 'on' if nav == 'health' }}" data-tip="Settings">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 7 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15a2 2 0 0 1-2-2 2 2 0 0 1 2-2 1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.4-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 9 4.6 2 2 0 0 1 11 3a2 2 0 0 1 2 2v.1A1.7 1.7 0 0 0 17 7a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V13a2 2 0 0 1 0 2Z"/></svg>
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
       <span>Settings</span>
     </a>
     <a href="{{ url_for('data_json') }}" target="_blank" rel="noopener" data-tip="JSON feed">
@@ -89,23 +93,19 @@
       <kbd>⌘K</kbd>
     </button>
 
-    {% if scr.ok %}
-    <span class="sysbadge online"><i></i>SYSTEM: ONLINE<s>&nbsp;· FEED LIVE</s></span>
-    {% elif scr.base == 'disabled' %}
-    <span class="sysbadge online"><i></i>SYSTEM: ONLINE<s>&nbsp;· MODE MANUAL</s></span>
-    {% else %}
-    <span class="sysbadge standby"><i></i>SYSTEM: ONLINE<s>&nbsp;· FEED DOWN</s></span>
-    {% endif %}
+    <span class="sysbadge online">
+      <i></i>SYSTEM: ONLINE<s>&nbsp;· {{ 'FEED LIVE' if scr.get('ok') else 'MODE MANUAL' }}</s>
+    </span>
 
     <div class="who">
       <button aria-haspopup="true" aria-expanded="false">
-        <span class="face">{{ integrations.who.label[:2] | upper }}</span>
-        <span class="name">{{ integrations.who.label }}<s data-session>00:00:00</s></span>
+        <span class="face">{{ whoname[:2] | upper }}</span>
+        <span class="name">{{ whoname }}<s data-session>00:00:00</s></span>
       </button>
       <div class="menu" role="menu">
         <div class="head">
-          <b>{{ integrations.who.label }}</b>
-          <span>{{ integrations.store.detail }}</span>
+          <b>{{ whoname }}</b>
+          <span>{{ store.get('detail') or 'session active' }}</span>
         </div>
         <a href="{{ url_for('health') }}" role="menuitem">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
@@ -127,8 +127,7 @@
 <div class="palette" role="dialog" aria-modal="true" aria-label="Command palette">
   <div class="bar">
     <span>&gt;</span>
-    <input type="text" placeholder="type a route, a target, an operator"
-           aria-label="Command input">
+    <input type="text" placeholder="type a route, a target, an operator" aria-label="Command input">
   </div>
   <ul role="listbox"></ul>
 </div>
