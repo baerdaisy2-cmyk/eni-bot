@@ -49,6 +49,40 @@ CREATE TABLE IF NOT EXISTS logs (
 CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id);
 CREATE INDEX IF NOT EXISTS idx_posts_rank ON posts(rank_score DESC);
 CREATE INDEX IF NOT EXISTS idx_logs_ts ON logs(ts DESC);
+
+CREATE TABLE IF NOT EXISTS as_posts (
+    id                  TEXT PRIMARY KEY,
+    subreddit           TEXT,
+    author              TEXT,
+    title               TEXT,
+    selftext            TEXT,
+    permalink           TEXT,
+    url                 TEXT,
+    created_utc         INTEGER,
+    score               INTEGER,
+    num_comments        INTEGER,
+    removed_by_category TEXT,
+    link_flair_text     TEXT,
+    fetched_at          INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS as_comments (
+    id          TEXT PRIMARY KEY,
+    post_id     TEXT,
+    parent_id   TEXT,
+    author      TEXT,
+    body        TEXT,
+    permalink   TEXT,
+    created_utc INTEGER,
+    score       INTEGER,
+    fetched_at  INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_as_posts_subreddit   ON as_posts(subreddit);
+CREATE INDEX IF NOT EXISTS idx_as_posts_created     ON as_posts(created_utc);
+CREATE INDEX IF NOT EXISTS idx_as_posts_removed     ON as_posts(removed_by_category);
+CREATE INDEX IF NOT EXISTS idx_as_comments_post     ON as_comments(post_id);
+CREATE INDEX IF NOT EXISTS idx_as_comments_author   ON as_comments(author);
 """
 
 PG_SCHEMA = """
@@ -75,6 +109,40 @@ CREATE TABLE IF NOT EXISTS logs (
 CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id);
 CREATE INDEX IF NOT EXISTS idx_posts_rank ON posts(rank_score DESC);
 CREATE INDEX IF NOT EXISTS idx_logs_ts ON logs(ts DESC);
+
+CREATE TABLE IF NOT EXISTS as_posts (
+    id                  TEXT PRIMARY KEY,
+    subreddit           TEXT,
+    author              TEXT,
+    title               TEXT,
+    selftext            TEXT,
+    permalink           TEXT,
+    url                 TEXT,
+    created_utc         INTEGER,
+    score               INTEGER,
+    num_comments        INTEGER,
+    removed_by_category TEXT,
+    link_flair_text     TEXT,
+    fetched_at          INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS as_comments (
+    id          TEXT PRIMARY KEY,
+    post_id     TEXT,
+    parent_id   TEXT,
+    author      TEXT,
+    body        TEXT,
+    permalink   TEXT,
+    created_utc INTEGER,
+    score       INTEGER,
+    fetched_at  INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_as_posts_subreddit   ON as_posts(subreddit);
+CREATE INDEX IF NOT EXISTS idx_as_posts_created     ON as_posts(created_utc);
+CREATE INDEX IF NOT EXISTS idx_as_posts_removed     ON as_posts(removed_by_category);
+CREATE INDEX IF NOT EXISTS idx_as_comments_post     ON as_comments(post_id);
+CREATE INDEX IF NOT EXISTS idx_as_comments_author   ON as_comments(author);
 """
 
 _PLACEHOLDER = re.compile(r"\?")
