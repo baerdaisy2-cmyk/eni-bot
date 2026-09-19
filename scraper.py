@@ -205,21 +205,32 @@ def _ours(author, body):
 
 
 def scrape(url):
-    """Fetch a post + comments from the local scraper, enrich, store, return payload."""
+    """Fetch a post + comments from Arctic Shift, enrich, store, return payload."""
     pid = post_id_from(url)
     if not pid:
         raise ValueError("could not find a post id in that URL")
 
-    posts = _get("/posts", {"limit": 200})
-    if isinstance(posts, dict):
-        posts = posts.get("posts", posts.get("results", []))
-    post = next((p for p in posts if str(p.get("id")) == pid), None)
-    if post is None:
-        raise LookupError("post %s is not in the local scraper's database yet" % pid)
+    import arctic_shift
+    import arctic_shift_db
 
-    raw = _get("/comments", {"post_id": pid})
-    if isinstance(raw, dict):
-        raw = raw.get("comments", raw.get("results", []))
+    post = arctic_shift.fetch_post(pid)
+    if post is None:
+        raise LookupError("Arctic Shift has no record of post %s yet" % pid)
+
+    tree = arctic_shift.fetch_thread(pid)
+    flat = arctic_shift.flatten_comments(tree)
+
+    arctic_shift_db.save_posts([post])
+    arctic_shift_db.save_comments(flat)
+
+    raw = [{
+        "comment_id": c.get("id"),
+        "id": c.get("id"),
+        "author": c.get("author"),
+        "body": c.get("body") or "",
+        "score": c.get("score") or 0,
+        "created_utc": c.get("created_utc"),
+    } for c in flat]
     raw = sorted(raw, key=lambda c: int(c.get("score") or 0), reverse=True)
 
     op = enrich_user(post.get("author"))
