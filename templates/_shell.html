@@ -1,110 +1,134 @@
 {% set scr = integrations.scraper %}
-<header class="top">
-  <button class="burger" aria-label="Open navigation" aria-expanded="false"
-          aria-controls="drawer">
-    <span></span><span></span><span></span>
-  </button>
-
-  <a class="wordmark" href="{{ url_for('index') }}">
-    <svg class="mark" viewBox="0 0 28 28" aria-hidden="true">
-      <path d="M4 5 L14 23 L24 5" fill="none" stroke="var(--yellow)" stroke-width="2.6"
+<aside class="rail">
+  <a class="logo" href="{{ url_for('index') }}">
+    <svg viewBox="0 0 28 28" aria-hidden="true">
+      <path d="M4 5 L14 23 L24 5" fill="none" stroke="var(--green)" stroke-width="2.4"
             stroke-linecap="square" stroke-linejoin="miter"/>
-      <path d="M1 14 H27" fill="none" stroke="var(--yellow)" stroke-width="1"
-            opacity=".45"/>
-      <rect x="12.4" y="19.4" width="3.2" height="3.2" fill="var(--yellow)"/>
+      <path d="M1 14 H27" fill="none" stroke="var(--cyan)" stroke-width="1" opacity=".6"/>
+      <rect x="12.4" y="19.4" width="3.2" height="3.2" fill="var(--green)"/>
     </svg>
     <b>VANTA</b>
   </a>
 
-  <div class="page-title">
-    <h1>{{ page_title }}</h1>
-    {% if page_sub %}<span>{{ page_sub }}</span>{% endif %}
-  </div>
-
-  <div class="spacer"></div>
-
-  {% if scr.ok %}
-  <span class="status live" title="{{ scr.detail }}"><i></i>LIVE</span>
-  {% else %}
-  <span class="status off" title="local scraper unreachable"><i></i>OFFLINE</span>
-  {% endif %}
-
-  <div class="avatar" title="{{ integrations.who.label }}">{{ integrations.who.label[:2] | upper }}</div>
-  <a class="btn ghost" href="{{ url_for('logout') }}">Logout</a>
-</header>
-
-<div class="overlay"></div>
-
-<aside class="drawer" id="drawer" role="navigation" aria-label="Main navigation">
-  <div class="drawer-head">
-    <a class="wordmark" href="{{ url_for('index') }}" style="border:0;padding:0">
-      <svg class="mark" viewBox="0 0 28 28" aria-hidden="true">
-        <path d="M4 5 L14 23 L24 5" fill="none" stroke="var(--yellow)" stroke-width="2.6"
-              stroke-linecap="square" stroke-linejoin="miter"/>
-        <path d="M1 14 H27" fill="none" stroke="var(--yellow)" stroke-width="1" opacity=".45"/>
-        <rect x="12.4" y="19.4" width="3.2" height="3.2" fill="var(--yellow)"/>
-      </svg>
-      <b>VANTA</b>
+  <p class="rail-label">Operations</p>
+  <nav aria-label="Primary">
+    <a href="{{ url_for('index') }}" class="{{ 'on' if nav == 'dash' }}" data-tip="Dashboard">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+      <span>Dashboard</span>
     </a>
-    <button class="drawer-close" data-drawer-close aria-label="Close navigation">&times;</button>
-  </div>
-
-  <p class="nav-label">Operations</p>
-  <nav class="nav">
-    <a href="{{ url_for('index') }}" class="{{ 'on' if nav == 'dash' }}">
-      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
-      Dashboard
+    <a href="{{ url_for('watch') }}" class="{{ 'on' if nav == 'watch' }}" data-tip="Targets">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/></svg>
+      <span>Targets</span>
     </a>
-    <a href="{{ url_for('scrape') }}" class="{{ 'on' if nav == 'scrape' }}">
+    <a href="{{ url_for('scrape') }}" class="{{ 'on' if nav == 'scrape' }}" data-tip="Intake">
       <svg viewBox="0 0 24 24"><path d="M4 7V5a2 2 0 0 1 2-2h2M16 3h2a2 2 0 0 1 2 2v2M20 17v2a2 2 0 0 1-2 2h-2M8 21H6a2 2 0 0 1-2-2v-2M8 12h8M12 8v8"/></svg>
-      Scraper
+      <span>Intake</span>
     </a>
-    <a href="{{ url_for('keywords_view') }}" class="{{ 'on' if nav == 'keywords' }}">
-      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      Keywords
+    <a href="{{ url_for('keywords_view') }}" class="{{ 'on' if nav == 'keywords' }}" data-tip="Signals">
+      <svg viewBox="0 0 24 24"><path d="M2 12h3l3-9 4 18 3-9h7"/></svg>
+      <span>Signals</span>
     </a>
-    <a href="{{ url_for('deletions') }}" class="{{ 'on' if nav == 'deletions' }}">
-      <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-      Deletions
+    <a href="{{ url_for('deletions') }}" class="{{ 'on' if nav == 'deletions' }}" data-tip="Breaches">
+      <svg viewBox="0 0 24 24"><path d="M12 2 3 6v6c0 5 3.8 9 9 10 5.2-1 9-5 9-10V6Z"/><path d="m9.5 12 2 2 3.5-4"/></svg>
+      <span>Breaches</span>
     </a>
-    <a href="{{ url_for('performers') }}" class="{{ 'on' if nav == 'performers' }}">
-      <svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0ZM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>
-      Performers
+    <a href="{{ url_for('subs') }}" class="{{ 'on' if nav == 'subs' }}" data-tip="Nodes">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span>Nodes</span>
     </a>
-    <a href="{{ url_for('watch') }}" class="{{ 'on' if nav == 'watch' }}">
-      <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-      Watchlist
+    <a href="{{ url_for('performers') }}" class="{{ 'on' if nav == 'performers' }}" data-tip="Operators">
+      <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/></svg>
+      <span>Operators</span>
     </a>
-    <a href="{{ url_for('health') }}" class="{{ 'on' if nav == 'health' }}">
+  </nav>
+
+  <p class="rail-label">System</p>
+  <nav aria-label="System">
+    <a href="{{ url_for('logs_view') }}" class="{{ 'on' if nav == 'logs' }}" data-tip="Console">
+      <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m6 9 3 3-3 3M12 15h5"/></svg>
+      <span>Console</span>
+    </a>
+    <a href="{{ url_for('health') }}" class="{{ 'on' if nav == 'health' }}" data-tip="Settings">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 7 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15a2 2 0 0 1-2-2 2 2 0 0 1 2-2 1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.4-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 9 4.6 2 2 0 0 1 11 3a2 2 0 0 1 2 2v.1A1.7 1.7 0 0 0 17 7a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V13a2 2 0 0 1 0 2Z"/></svg>
-      Settings
+      <span>Settings</span>
     </a>
-  </nav>
-
-  <p class="nav-label">Analysis</p>
-  <nav class="nav">
-    <a href="{{ url_for('subs') }}" class="{{ 'on' if nav == 'subs' }}">
-      <svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
-      Subreddits
-    </a>
-    <a href="{{ url_for('logs_view') }}" class="{{ 'on' if nav == 'logs' }}">
-      <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
-      Logs
-    </a>
-    <a href="{{ url_for('data_json') }}" target="_blank" rel="noopener">
+    <a href="{{ url_for('data_json') }}" target="_blank" rel="noopener" data-tip="JSON feed">
       <svg viewBox="0 0 24 24"><path d="M8 3H6a2 2 0 0 0-2 2v4M16 3h2a2 2 0 0 1 2 2v4M8 21H6a2 2 0 0 1-2-2v-4M16 21h2a2 2 0 0 0 2-2v-4"/></svg>
-      JSON export
+      <span>JSON feed</span>
     </a>
   </nav>
 
-  <div class="drawer-foot">
+  <div class="rail-foot">
+    <button type="button" data-rail>
+      <svg viewBox="0 0 24 24"><path d="M4 4v16M20 9l-4 3 4 3"/></svg>
+      <span>Collapse</span>
+    </button>
     <button type="button" data-theme-toggle>
       <svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
-      <span id="themeLabel">Light mode</span>
+      <span data-theme-label>Light mode</span>
     </button>
-    <a href="{{ url_for('logout') }}">
-      <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-      Sign out
-    </a>
   </div>
 </aside>
+
+<main class="main">
+  <header class="cmdbar">
+    <button class="burger" data-rail aria-label="Toggle navigation">
+      <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+
+    <div class="crumb">
+      <h1>{{ page_title }}</h1>
+      <span class="path">/<em>{{ page_slug | default('root') }}</em>{% if page_sub %} · {{ page_sub }}{% endif %}</span>
+    </div>
+
+    <div class="flex"></div>
+
+    <button class="omni" data-palette aria-label="Open command palette">
+      <span class="caret">&gt;</span>
+      <span class="ph">search routes, targets, operators</span>
+      <kbd>⌘K</kbd>
+    </button>
+
+    {% if scr.ok %}
+    <span class="sysbadge online"><i></i>SYSTEM: ONLINE<s>&nbsp;· FEED LIVE</s></span>
+    {% elif scr.base == 'disabled' %}
+    <span class="sysbadge online"><i></i>SYSTEM: ONLINE<s>&nbsp;· MODE MANUAL</s></span>
+    {% else %}
+    <span class="sysbadge standby"><i></i>SYSTEM: ONLINE<s>&nbsp;· FEED DOWN</s></span>
+    {% endif %}
+
+    <div class="who">
+      <button aria-haspopup="true" aria-expanded="false">
+        <span class="face">{{ integrations.who.label[:2] | upper }}</span>
+        <span class="name">{{ integrations.who.label }}<s data-session>00:00:00</s></span>
+      </button>
+      <div class="menu" role="menu">
+        <div class="head">
+          <b>{{ integrations.who.label }}</b>
+          <span>{{ integrations.store.detail }}</span>
+        </div>
+        <a href="{{ url_for('health') }}" role="menuitem">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+          System settings
+        </a>
+        <button type="button" data-theme-toggle role="menuitem">
+          <svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+          <span data-theme-label>Light mode</span>
+        </button>
+        <a href="{{ url_for('logout') }}" class="kill" role="menuitem">
+          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          Terminate session
+        </a>
+      </div>
+    </div>
+  </header>
+
+<div class="scrim"></div>
+<div class="palette" role="dialog" aria-modal="true" aria-label="Command palette">
+  <div class="bar">
+    <span>&gt;</span>
+    <input type="text" placeholder="type a route, a target, an operator"
+           aria-label="Command input">
+  </div>
+  <ul role="listbox"></ul>
+</div>

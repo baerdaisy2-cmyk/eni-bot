@@ -1,147 +1,99 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-<head>{% include "_head.html" %}<title>Watchlist — VANTA</title></head>
+<head>{% include "_head.html" %}<title>Targets — VANTA</title></head>
 <body>
+<div class="shell">
 {% set nav = 'watch' %}
-{% set page_title = 'Watchlist' %}
-{% set page_sub = 'your comments · checked by hand' %}
+{% set page_title = 'Targets' %}
+{% set page_slug = 'targets' %}
+{% set page_sub = 'registered comments · manual verification' %}
 {% include "_shell.html" %}
 
-<div class="wrap">
-  {% if only_stale %}
-  <div class="notice">
-    <p>Showing only comments unchecked for over {{ (stale_seconds // 3600) }} hours.</p>
-    <a class="btn" href="{{ url_for('watch') }}">Show all</a>
-  </div>
-  {% elif stale %}
-  <div class="notice">
-    <p><b>{{ stale }}</b> overdue for a check.</p>
-    <a class="btn" href="{{ url_for('watch', stale=1) }}">Show only those</a>
-  </div>
-  {% endif %}
+  <div class="view">
+    {% if note %}<div class="notice"><p>{{ note }}</p></div>{% endif %}
 
-  <section class="panel">
-    <h2>Find threads</h2>
-    <div class="chips" id="chips"></div>
-    <div class="field">
-      <label for="q">Custom search</label>
-      <input id="q" autocomplete="off" placeholder="iptv canada">
-    </div>
-    <div class="row" style="margin-top:0">
-      <button class="btn" id="qgo" type="button">Search Google</button>
-      <span class="hint">Opens a new tab. You read the results and pick the thread.</span>
-    </div>
-  </section>
+    <section class="panel">
+      <h2>Register target</h2>
+      <form method="post" action="{{ url_for('watch_add') }}">
+        <div class="field">
+          <label for="link">Comment permalink</label>
+          <input name="link" id="link" required autocomplete="off" spellcheck="false"
+                 placeholder="https://reddit.com/r/.../comments/.../_/abc123/">
+        </div>
+        <div class="row" style="margin-top:0">
+          <button class="btn primary" type="submit">Register</button>
+          <span class="hint">Post the comment on Reddit yourself, then paste the link here.
+            VANTA never posts.</span>
+        </div>
+      </form>
+    </section>
 
-  <section class="panel">
-    <h2>Add comments</h2>
-    <form method="post" action="{{ url_for('watch_add') }}">
-      <div class="field">
-        <label for="urls">Comment permalinks — one per line</label>
-        <textarea name="urls" id="urls" required
-                  placeholder="https://www.reddit.com/r/IPTV/comments/1abcdef/title/mno9876/"></textarea>
-      </div>
-      <div class="field">
-        <label for="note">Note (optional)</label>
-        <input name="note" id="note" autocomplete="off" placeholder="what you said, or why this thread">
-      </div>
-      <div class="row" style="margin-top:0">
-        <button class="btn primary" type="submit">Add to watchlist</button>
-        <span class="hint">Use the comment's own share link — it ends in the comment id,
-          not the thread slug.</span>
-      </div>
-    </form>
-  </section>
-
-  <section class="panel flush">
-    <h2>Tracking {{ rows | length }}</h2>
-    <div class="tablewrap">
-      <table data-sortable>
-        <thead><tr><th>Sub</th><th>Comment</th><th>Owner</th><th>Added</th><th>Checked</th>
-                   <th>State</th><th class="no"></th></tr></thead>
-        <tbody>
-        {% for r in rows %}
-          <tr>
-            <td class="mono muted">r/{{ r.subreddit or '?' }}</td>
-            <td>
-              <a class="mono" target="_blank" rel="noopener"
-                 href="https://reddit.com/r/{{ r.subreddit }}/comments/{{ r.post_id }}/-/{{ r.id }}">{{ r.id }}</a>
-              {% if r.mentions_marker %}<span class="tag key">marker</span>{% endif %}
-            </td>
-            <td class="muted tiny">{{ r.owner or '—' }}</td>
-            <td class="muted tiny mono">{{ r.created_utc | ago }}</td>
-            <td class="muted tiny mono">{{ r.last_seen | ago }}</td>
-            <td>
-              {% if r.deleted %}<span class="tag bad">gone</span>
-              {% else %}<span class="tag good">up</span>{% endif %}
-            </td>
-            <td>
-              <div class="acts">
-                {% if not r.deleted %}
-                <form method="post" action="{{ url_for('watch_verdict', cid=r.id, verdict='alive') }}">
-                  <input type="hidden" name="back" value="{{ request.full_path }}">
-                  <button class="mini up">Still up</button></form>
-                <form method="post" action="{{ url_for('watch_verdict', cid=r.id, verdict='gone') }}">
-                  <input type="hidden" name="back" value="{{ request.full_path }}">
-                  <button class="mini down">Gone</button></form>
-                {% else %}
-                <form method="post" action="{{ url_for('watch_verdict', cid=r.id, verdict='alive') }}">
-                  <input type="hidden" name="back" value="{{ request.full_path }}">
-                  <button class="mini up">It's back</button></form>
-                {% endif %}
-                <form method="post" action="{{ url_for('watch_drop', cid=r.id) }}">
-                  <input type="hidden" name="back" value="{{ request.full_path }}">
-                  <button class="mini">Drop</button></form>
-              </div>
-            </td>
-          </tr>
-        {% else %}
-          <tr><td colspan="7" class="empty">
-            <strong>Nothing tracked yet</strong>
-            Click a search above, comment on a thread, then paste the comment link.
-          </td></tr>
+    <section class="panel">
+      <h2>Search vectors</h2>
+      <div class="chips">
+        {% for s in searches %}
+        <a class="chip" href="{{ s.url }}" target="_blank" rel="noopener">
+          <b>{{ s.label }}</b><s>open ↗</s>
+        </a>
         {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </section>
+      </div>
+      <p class="hint">Opens Google restricted to Reddit. Find a thread, comment, register it above.</p>
+    </section>
 
-  <section class="panel">
-    <h2>Method</h2>
-    <p class="hint">
-      Open a comment link, look at it, click <b style="color:var(--text)">Still up</b> or
-      <b style="color:var(--text)">Gone</b>.<br><br>
-      Two of your comments gone on the same thread blacklists that thread. More than half gone
-      in a subreddit, over at least five comments, flags the whole subreddit. A comment that
-      vanished under an hour is recorded as suspected mod or filter action — suspected, not proven.
-    </p>
-  </section>
+    <section class="panel flush">
+      <h2>Registry — {{ items | length }}{% if request.args.get('stale') %} · unverified only{% endif %}</h2>
+      <div class="scroll">
+        <table data-sortable>
+          <thead><tr>
+            <th class="no idx">#</th><th>Node</th><th>Comment</th>
+            <th class="num">Age</th><th>State</th><th class="no"></th>
+          </tr></thead>
+          <tbody>
+          {% for c in items %}
+            <tr>
+              <td class="idx">{{ '%02d' % loop.index }}</td>
+              <td class="mono muted">r/{{ c.subreddit or '?' }}</td>
+              <td>
+                <a href="{{ c.permalink }}" target="_blank" rel="noopener">{{ (c.body or 'no preview')[:72] }}</a>
+                {% if c.has_marker %}<span class="tag-pill key">marker</span>{% endif %}
+              </td>
+              <td class="num faint">{{ c.age_hours }}h</td>
+              <td>
+                {% if c.is_deleted %}
+                  <span class="tag-pill bad">compromised</span>
+                {% elif c.last_checked %}
+                  <span class="tag-pill ok">active</span>
+                {% else %}
+                  <span class="tag-pill warn">unverified</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="acts">
+                  <form method="post" action="{{ url_for('watch_verdict', cid=c.id, verdict='up') }}">
+                    <button class="mini up" type="submit">Up</button>
+                  </form>
+                  <form method="post" action="{{ url_for('watch_verdict', cid=c.id, verdict='gone') }}">
+                    <button class="mini down" type="submit">Gone</button>
+                  </form>
+                  <form method="post" action="{{ url_for('watch_drop', cid=c.id) }}">
+                    <button class="mini" type="submit">Drop</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6" class="empty">
+              <strong>REGISTRY EMPTY</strong>
+              Nothing is being tracked. Paste your first comment link above.
+            </td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</main>
 </div>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
-<script>
-var SAVED = ["iptv service reddit","iptv canada reddit","cheap iptv service reddit",
-  "best iptv 2026 reddit","iptv firestick reddit","iptv reseller panel reddit",
-  "site:reddit.com/r/IPTV recommendation"];
-function openGoogle(text){
-  var q=(text||"").trim();
-  if(!q){return;}
-  if(q.toLowerCase().indexOf("reddit")===-1){q+=" reddit";}
-  window.open("https://www.google.com/search?q="+encodeURIComponent(q),"_blank","noopener");
-}
-var chips=document.getElementById("chips");
-SAVED.forEach(function(t){
-  var b=document.createElement("button");
-  b.type="button";b.className="chip";
-  var s1=document.createElement("b");s1.textContent=t;
-  var s2=document.createElement("s");s2.textContent="open";
-  b.appendChild(s1);b.appendChild(s2);
-  b.addEventListener("click",function(){openGoogle(t);});
-  chips.appendChild(b);
-});
-document.getElementById("qgo").addEventListener("click",function(){
-  openGoogle(document.getElementById("q").value);});
-document.getElementById("q").addEventListener("keydown",function(e){
-  if(e.key==="Enter"){e.preventDefault();openGoogle(this.value);}});
-</script>
 </body>
 </html>

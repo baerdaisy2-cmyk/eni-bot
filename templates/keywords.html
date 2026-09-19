@@ -1,105 +1,96 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-<head>{% include "_head.html" %}<title>Keywords — VANTA</title></head>
+<head>{% include "_head.html" %}<title>Signals — VANTA</title></head>
 <body>
+<div class="shell">
 {% set nav = 'keywords' %}
-{% set page_title = 'Keywords' %}
-{% set page_sub = 'watch terms · live matches' %}
+{% set page_title = 'Signals' %}
+{% set page_slug = 'signals' %}
+{% set page_sub = 'watch terms · matches' %}
 {% set off = status.base == 'disabled' %}
 {% include "_shell.html" %}
 
-<div class="wrap">
-  {% if off %}
-  <section class="panel" style="border-left:2px solid var(--line-2)">
-    <h2>Standby</h2>
-    <p class="hint">
-      Sweeps need a data source and none is configured. You can still add and remove
-      keywords — they are stored and will be checked the moment a source comes online.
-    </p>
-  </section>
-  {% elif not status.ok %}
-  <div class="notice bad">
-    <p>Source unreachable at <b>{{ status.base }}</b>. Sweeps need it running.</p>
-  </div>
-  {% endif %}
-  {% if note %}<div class="notice"><p>{{ note }}</p></div>{% endif %}
-
-  <section class="panel">
-    <h2>Watching {{ words | length }} of {{ maximum }}</h2>
-    <div class="chips">
-      {% for k in words %}
-      <span class="chip {{ 'hot' if k.matches }}">
-        <b>{{ k.word }}</b>
-        <s>{{ k.matches or 0 }} hit{{ '' if k.matches == 1 else 's' }}</s>
-        <form method="post" style="display:inline">
-          <input type="hidden" name="action" value="remove">
-          <input type="hidden" name="word" value="{{ k.word }}">
-          <button type="submit" aria-label="Stop watching {{ k.word }}">&times;</button>
-        </form>
-      </span>
-      {% else %}
-      <span class="hint">Nothing watched yet. Add your brand names and markers below.</span>
-      {% endfor %}
+  <div class="view">
+    {% if off %}
+    <div class="notice warn">
+      <p><b>Sweeps on standby.</b> No source attached. Terms are stored and matched
+         the moment a feed comes online.</p>
     </div>
-
-    {% if words | length < maximum %}
-    <form method="post">
-      <input type="hidden" name="action" value="add">
-      <div class="field">
-        <label for="word">New keyword</label>
-        <input name="word" id="word" required maxlength="60" autocomplete="off"
-               placeholder="lemonrealm">
-      </div>
-      <div class="row" style="margin-top:0">
-        <button class="btn primary" type="submit">Add keyword</button>
-        <span class="hint">Case-insensitive. Stored now, matched as soon as a source is live.</span>
-      </div>
-    </form>
-    {% else %}
-    <p class="hint">Limit reached. Remove one to add another.</p>
+    {% elif not status.ok %}
+    <div class="notice bad"><p>Source unreachable at <b>{{ status.base }}</b>. Sweeps require it.</p></div>
     {% endif %}
-  </section>
+    {% if note %}<div class="notice"><p>{{ note }}</p></div>{% endif %}
 
-  {% if not off %}
-  <section class="panel">
-    <h2>Sweep</h2>
-    <form method="post">
-      <input type="hidden" name="action" value="sweep">
-      <div class="row" style="margin-top:0">
-        <button class="btn primary" type="submit">Run sweep now</button>
-        <span class="hint">Queries the source for every watched term. Duplicates are
-          never counted twice.</span>
+    <section class="panel">
+      <h2>Watching {{ words | length }} / {{ maximum }}</h2>
+      <div class="chips">
+        {% for k in words %}
+        <span class="chip {{ 'hot' if k.matches }}">
+          <b>{{ k.word }}</b><s>{{ k.matches or 0 }} hit{{ '' if k.matches == 1 else 's' }}</s>
+          <form method="post" style="display:inline">
+            <input type="hidden" name="action" value="remove">
+            <input type="hidden" name="word" value="{{ k.word }}">
+            <button type="submit" aria-label="Remove {{ k.word }}">&times;</button>
+          </form>
+        </span>
+        {% else %}
+        <span class="hint">No terms yet. Add brand names and markers below.</span>
+        {% endfor %}
       </div>
-    </form>
-  </section>
-  {% endif %}
 
-  <section class="panel">
-    <h2>Matches — {{ hits | length }}</h2>
-    {% for h in hits %}
-    <div class="item">
-      <div class="body">
-        <div class="meta">
-          <b style="color:var(--yellow)">{{ h.word }}</b>
-          <span>r/{{ h.subreddit or '?' }}</span>
-          <span>u/{{ h.author or '?' }}</span>
-          <span>{{ h.found_at | ts }}</span>
-          {% if h.post_id %}
-          <a class="mono" target="_blank" rel="noopener"
-             href="https://reddit.com/comments/{{ h.post_id }}">open thread</a>
-          {% endif %}
+      {% if words | length < maximum %}
+      <form method="post">
+        <input type="hidden" name="action" value="add">
+        <div class="field">
+          <label for="word">New term</label>
+          <input name="word" id="word" required maxlength="60" autocomplete="off"
+                 spellcheck="false" placeholder="lemonrealm">
         </div>
-        <div class="txt">{{ h.body }}</div>
+        <div class="row" style="margin-top:0">
+          <button class="btn primary" type="submit">Add term</button>
+          <span class="hint">Case-insensitive. Stored now, matched when a feed exists.</span>
+        </div>
+      </form>
+      {% else %}
+      <p class="hint">Limit reached. Remove one to add another.</p>
+      {% endif %}
+    </section>
+
+    {% if not off %}
+    <section class="panel">
+      <h2>Sweep</h2>
+      <form method="post">
+        <input type="hidden" name="action" value="sweep">
+        <div class="row" style="margin-top:0">
+          <button class="btn primary" type="submit">Run sweep</button>
+          <span class="hint">Queries every watched term. Duplicates never double-count.</span>
+        </div>
+      </form>
+    </section>
+    {% endif %}
+
+    <section class="panel">
+      <h2>Matches — {{ hits | length }}</h2>
+      {% for h in hits %}
+      <div class="item">
+        <div class="body">
+          <div class="meta">
+            <b style="color:var(--cyan)">{{ h.word }}</b>
+            <span>r/{{ h.subreddit or '?' }}</span><span>u/{{ h.author or '?' }}</span>
+            <span>{{ h.found_at | ts }}</span>
+            {% if h.post_id %}<a class="mono" target="_blank" rel="noopener"
+              href="https://reddit.com/comments/{{ h.post_id }}">open ↗</a>{% endif %}
+          </div>
+          <div class="txt">{{ h.body }}</div>
+        </div>
       </div>
-    </div>
-    {% else %}
-    <p class="empty">
-      <strong>No matches yet</strong>
-      {% if off %}Keywords are stored and waiting on a source.
-      {% else %}Add a keyword, then run a sweep.{% endif %}
-    </p>
-    {% endfor %}
-  </section>
+      {% else %}
+      <p class="empty"><strong>NO SIGNAL</strong>
+        {% if off %}Terms stored, waiting on a feed.{% else %}Add a term, then sweep.{% endif %}</p>
+      {% endfor %}
+    </section>
+  </div>
+</main>
 </div>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>

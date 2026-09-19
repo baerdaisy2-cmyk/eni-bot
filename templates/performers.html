@@ -1,58 +1,70 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-<head>{% include "_head.html" %}<title>Performers — VANTA</title></head>
+<head>{% include "_head.html" %}<title>Operators — VANTA</title></head>
 <body>
+<div class="shell">
 {% set nav = 'performers' %}
-{% set page_title = 'Performers' %}
-{% set page_sub = 'output · survival · rank' %}
+{% set page_title = 'Operators' %}
+{% set page_slug = 'operators' %}
+{% set page_sub = 'per-account performance' %}
 {% include "_shell.html" %}
 
-<div class="wrap">
-  <section class="grid">
-    <div class="card"><b>Comments made</b><i data-count="{{ tracking.total_comments_made }}">0</i></div>
-    <div class="card key"><b>Ranked 01</b><i data-count="{{ tracking.rank_1_count }}">0</i></div>
-    <div class="card"><b>Ranked 02—05</b><i data-count="{{ tracking.rank_medium_count }}">0</i></div>
-    <div class="card"><b>Ranked 06+</b><i data-count="{{ tracking.rank_low_count }}">0</i></div>
-  </section>
+  <div class="view">
+    <section class="metrics">
+      <div class="metric cyan"><b>Comments made</b><i data-count="{{ tracking.total_comments_made }}">0</i></div>
+      <div class="metric green"><b>Rank 01 hits</b><i data-count="{{ tracking.rank_1_count }}">0</i></div>
+      <div class="metric"><b>Rank 02-05</b><i data-count="{{ tracking.rank_medium_count }}">0</i></div>
+      <div class="metric"><b>Rank 06+</b><i data-count="{{ tracking.rank_low_count }}">0</i></div>
+    </section>
 
-  <section class="panel">
-    <h2>Leaderboard</h2>
-    {% for p in people %}
-    <div class="item">
-      <div class="pos">{{ '%02d' % loop.index }}</div>
-      <img class="av" style="width:34px;height:34px" src="{{ p.avatar }}" alt="" loading="lazy">
-      <div class="body">
-        <div class="meta"><b>{{ p.username }}</b></div>
-        <div class="txt" style="font-family:var(--mono);font-size:11px">
-          {% if p.account_age_days is not none %}account {{ p.account_age_days }} days old{% else %}account age unknown{% endif %}
-        </div>
+    <section class="panel flush">
+      <h2>Leaderboard</h2>
+      <div class="scroll">
+        <table data-sortable>
+          <thead><tr>
+            <th class="no idx">#</th><th>Operator</th><th class="num">Made</th>
+            <th class="num">Rank 01</th><th class="num">Lost</th><th>Survival</th>
+          </tr></thead>
+          <tbody>
+          {% for p in performers %}
+            <tr>
+              <td class="idx">{{ '%02d' % loop.index }}</td>
+              <td class="mono">{{ p.owner }}</td>
+              <td class="num">{{ p.made }}</td>
+              <td class="num" style="color:var(--green)">{{ p.rank_1 }}</td>
+              <td class="num" style="color:{{ 'var(--red)' if p.deleted else 'var(--faint)' }}">{{ p.deleted }}</td>
+              <td>
+                <div class="meter">
+                  <div class="bar {{ 'ok' if p.survival_rate >= 0.8 else ('bad' if p.survival_rate < 0.5 else '') }}">
+                    <i style="width:{{ (p.survival_rate * 100) | round(0) | int }}%"></i>
+                  </div>
+                  <b>{{ (p.survival_rate * 100) | round(0) | int }}%</b>
+                </div>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6" class="empty">
+              <strong>NO OPERATORS</strong>
+              Stats appear once comments are registered and verified.
+            </td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
       </div>
-      <div class="nums">
-        <div><i>{{ p.comments_made }}</i><s>made</s></div>
-        <div><i>{{ p.rank_1_hits }}</i><s>rank 01</s></div>
-        <div><i>{{ p.survival_rate }}%</i><s>survived</s></div>
-      </div>
-    </div>
-    {% else %}
-    <p class="empty">
-      <strong>No one on the board</strong>
-      Add comments through the <a href="{{ url_for('watch') }}">watchlist</a> and whoever adds
-      them appears here.
-    </p>
-    {% endfor %}
-  </section>
+    </section>
 
-  <section class="panel">
-    <h2>Long-term performance</h2>
-    <div class="kv">
-      <div><s>Period</s><i>ALL TIME</i></div>
-      <div><s>Days running</s><i>{{ longterm.days_running }}</i></div>
-      <div><s>Posts tracked</s><i>{{ longterm.total_posts_tracked }}</i></div>
-      <div><s>Comments tracked</s><i>{{ longterm.total_comments_tracked }}</i></div>
-      <div><s>Threads scraped</s><i>{{ longterm.total_scrapes }}</i></div>
-      <div><s>Average rank</s><i class="key">{{ longterm.avg_rank or '—' }}</i></div>
-    </div>
-  </section>
+    <section class="panel">
+      <h2>Long-term telemetry</h2>
+      <div class="kv">
+        <div><s>Uptime days</s><i data-count="{{ longterm.days_running }}">0</i></div>
+        <div><s>Threads</s><i data-count="{{ longterm.total_posts_tracked }}">0</i></div>
+        <div><s>Comments</s><i data-count="{{ longterm.total_comments_tracked }}">0</i></div>
+        <div><s>Intakes</s><i data-count="{{ longterm.total_scrapes }}">0</i></div>
+        <div><s>Mean rank</s><i class="key">{{ longterm.avg_rank or '—' }}</i></div>
+      </div>
+    </section>
+  </div>
+</main>
 </div>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>

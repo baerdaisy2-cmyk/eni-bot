@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>{% include "_head.html" %}<title>Deletions — VANTA</title></head>
+<body>
+{% set nav = 'deletions' %}
+{% set page_title = 'Deletions' %}
+{% set page_sub = 'what was removed · where · how fast' %}
+{% include "_shell.html" %}
+
+<div class="wrap">
+  <section class="grid">
+    <div class="card {{ 'danger' if stats.total_deleted }}"><b>Total removed</b>
+      <i data-count="{{ stats.total_deleted }}">0</i></div>
+    <div class="card"><b>Deletion rate</b>
+      <i data-count="{{ (stats.deletion_rate * 100) | round(0) | int }}" data-suffix="%">0%</i></div>
+    <div class="card {{ 'danger' if fast }}"><b>Fast removals</b>
+      <i data-count="{{ fast }}">0</i><small>under 1 hour</small></div>
+    <div class="card"><b>Subs measured</b>
+      <i data-count="{{ stats.aggressive_subreddits | length }}">0</i></div>
+  </section>
+
+  <section class="panel flush">
+    <h2>Aggression ranking</h2>
+    <div class="tablewrap">
+      <table data-sortable>
+        <thead><tr><th>Subreddit</th><th>Comments</th><th>Removed</th>
+                   <th class="no">Aggression</th><th class="num">Score</th></tr></thead>
+        <tbody>
+        {% for s in stats.aggressive_subreddits %}
+          <tr>
+            <td class="mono">r/{{ s.subreddit }}</td>
+            <td class="muted">{{ s.total }}</td>
+            <td class="muted">{{ s.deletions }}</td>
+            <td>
+              <div class="meter">
+                <div class="bar {{ 'ok' if s.aggression_score < 0.25 else ('danger' if s.aggression_score >= 0.5 else '') }}">
+                  <i style="width:{{ (s.aggression_score * 100) | round(0) | int }}%"></i>
+                </div>
+                <b>{{ (s.aggression_score * 100) | round(0) | int }}%</b>
+              </div>
+            </td>
+            <td class="num">{{ s.aggression_score }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="empty">
+            <strong>Nothing removed yet</strong>
+            Mark a comment gone on the watchlist, or scrape a thread containing removed comments.
+          </td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel flush">
+    <h2>Removal log</h2>
+    <div class="tablewrap">
+      <table data-sortable>
+        <thead><tr><th>Comment</th><th>Subreddit</th><th>Owner</th><th>When</th><th class="no">Inferred cause</th></tr></thead>
+        <tbody>
+        {% for r in recent %}
+          <tr>
+            <td class="mono">
+              <a href="https://reddit.com/r/{{ r.subreddit }}/comments/{{ r.post_id }}/-/{{ r.id }}"
+                 target="_blank" rel="noopener">{{ r.id }}</a>
+            </td>
+            <td class="muted">r/{{ r.subreddit or '?' }}</td>
+            <td class="muted tiny">{{ r.owner or '—' }}</td>
+            <td class="muted tiny mono">{{ r.deleted_at | ts }}</td>
+            <td>
+              {% if r.delete_reason == 'mod_or_filter_suspected' %}
+              <span class="tag bad">mod or filter suspected</span>
+              {% else %}
+              <span class="tag">removed or self-deleted</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="empty"><strong>Clean</strong>Nothing has been marked gone.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Method</h2>
+    <p class="hint">
+      <b style="color:var(--text)">aggression_score = removed ÷ total comments</b> in that
+      subreddit. It counts your own comments marked gone on the watchlist plus any comment the
+      scraper found showing as removed.<br><br>
+      A <b style="color:var(--text)">fast removal</b> vanished inside an hour of being added.
+      That pattern points at an automod rule rather than a human. Points at — Reddit never
+      says why.<br><br>
+      Under {{ minimum }} comments in a subreddit, treat the number as noise.
+    </p>
+  </section>
+</div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

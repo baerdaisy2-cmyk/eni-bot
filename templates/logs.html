@@ -1,53 +1,62 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-<head>{% include "_head.html" %}<title>Logs — VANTA</title></head>
+<head>{% include "_head.html" %}<title>Console — VANTA</title></head>
 <body>
+<div class="shell">
 {% set nav = 'logs' %}
-{% set page_title = 'Logs' %}
-{% set page_sub = 'plain words · machine detail' %}
+{% set page_title = 'Console' %}
+{% set page_slug = 'console' %}
+{% set page_sub = 'event stream' %}
 {% include "_shell.html" %}
 
-<div class="wrap">
-  <div class="row" style="margin:0 0 16px">
-    <a class="btn {{ 'primary' if not level }}" href="{{ url_for('logs_view') }}">All {{ counts.values() | sum }}</a>
-    {% for lv in ['INFO','WARN','ERROR'] %}
-    <a class="btn {{ 'primary' if level == lv }}" href="{{ url_for('logs_view', level=lv) }}">{{ lv }} {{ counts.get(lv, 0) }}</a>
-    {% endfor %}
-    <div class="spacer"></div>
-    <button class="btn" id="copyjson" type="button">Copy JSON</button>
-  </div>
-
-  <section class="panel flush">
-    <div class="tablewrap">
-      <table data-sortable>
-        <thead><tr><th>When</th><th>Level</th><th>Actor</th><th>What happened</th><th class="no">Detail</th></tr></thead>
-        <tbody>
-        {% for r in rows %}
-          <tr>
-            <td class="mono muted">{{ r.ts | ts }}</td>
-            <td><span class="lvl {{ r.level | lower }}">{{ r.level }}</span></td>
-            <td class="muted tiny">{{ r.actor }}</td>
-            <td>{{ r.message }}</td>
-            <td class="mono muted tiny" style="max-width:260px;word-break:break-word">{{ r.context }}</td>
-          </tr>
+  <div class="view">
+    <section class="panel">
+      <h2>Live stream — {{ logs | length }} events</h2>
+      <div class="console" style="max-height:440px">
+        {% for l in logs | reverse %}
+        <div class="ln">
+          <span class="ts">{{ l.ts | ts }}</span>
+          <span class="tag {{ l.level | lower }}">[{{ l.level }}]</span>
+          <span class="msg">{{ l.message }}</span>
+        </div>
         {% else %}
-          <tr><td colspan="5" class="empty"><strong>No log lines yet</strong>Everything the monitor does lands here, newest first.</td></tr>
+        <div class="ln"><span class="msg">no events recorded</span></div>
         {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </section>
+        <div class="ln"><span class="cursor">█</span></div>
+      </div>
+      <div class="row">
+        <a class="btn ghost" href="{{ url_for('logs_json') }}" target="_blank" rel="noopener">Raw JSON ↗</a>
+      </div>
+    </section>
+
+    <section class="panel flush">
+      <h2>Structured events</h2>
+      <div class="scroll">
+        <table data-sortable>
+          <thead><tr><th class="no idx">#</th><th>Time</th><th>Level</th><th>Event</th><th class="no">Context</th></tr></thead>
+          <tbody>
+          {% for l in logs | reverse %}
+            <tr>
+              <td class="idx">{{ '%02d' % loop.index }}</td>
+              <td class="mono faint">{{ l.ts | ts }}</td>
+              <td><span class="lvl {{ l.level | lower }}">{{ l.level }}</span></td>
+              <td>{{ l.message }}</td>
+              <td>
+                {% if l.context %}
+                <details><summary>context</summary><pre class="out">{{ l.context }}</pre></details>
+                {% else %}<span class="faint tiny">—</span>{% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="empty"><strong>NO EVENTS</strong>Nothing logged yet.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</main>
 </div>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
-<script>
-document.getElementById('copyjson').addEventListener('click', function () {
-  var b = this;
-  fetch('/logs.json').then(function (r) { return r.json(); }).then(function (d) {
-    navigator.clipboard.writeText(JSON.stringify(d, null, 2));
-    b.textContent = 'Copied ' + d.length;
-    setTimeout(function () { b.textContent = 'Copy JSON'; }, 1800);
-  }).catch(function () { b.textContent = 'Failed'; });
-});
-</script>
 </body>
 </html>

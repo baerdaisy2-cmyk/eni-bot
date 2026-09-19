@@ -2,57 +2,104 @@
 <html lang="en" data-theme="dark">
 <head>{% include "_head.html" %}<title>Settings — VANTA</title></head>
 <body>
+<div class="shell">
 {% set nav = 'health' %}
-{% set page_title = 'Settings' %}
-{% set page_sub = 'system status · configuration' %}
+{% set page_title = 'System settings' %}
+{% set page_slug = 'system' %}
+{% set page_sub = 'subsystem checks' %}
 {% include "_shell.html" %}
 
-<div class="wrap">
-  <section class="grid">
-    <div class="card {{ '' if all_ok else 'danger' }}">
-      <b>System</b><i style="font-size:19px">{{ 'NOMINAL' if all_ok else 'DEGRADED' }}</i></div>
-    <div class="card"><b>Uptime</b><i style="font-size:19px">{{ uptime }}</i></div>
-    <div class="card"><b>Comments stored</b><i data-count="{{ stats.comments }}">0</i></div>
-    <div class="card {{ 'danger' if stats.deleted }}"><b>Removed</b><i data-count="{{ stats.deleted }}">0</i></div>
-  </section>
+  <div class="view">
+    <section class="panel">
+      <h2>Subsystems</h2>
 
-  <section class="panel">
-    <h2>Checks</h2>
-    {% for c in checks %}
-    <div class="check {{ 'on' if c.ok }}">
-      <i class="dot"></i>
-      <div class="t">
-        <b>{{ c.name }}</b>
-        <div class="note">{{ c.note }}</div>
-        <div class="why">{{ c.why }}</div>
+      <div class="check on">
+        <i class="dot"></i>
+        <div class="t">
+          <b>Storage</b>
+          <div class="note">{{ integrations.store.detail }}</div>
+          <div class="why">Where every thread, comment and event is written. Green means
+            the connection is open and writes are landing.</div>
+        </div>
+        <span class="tag-pill ok">online</span>
       </div>
-      <span class="tag {{ 'good' if c.ok else 'key' }}">{{ 'ok' if c.ok else 'note' }}</span>
-    </div>
-    {% endfor %}
-  </section>
 
-  <section class="panel">
-    <h2>Machine endpoints</h2>
-    <p class="hint">
-      <code style="font-family:var(--mono);color:var(--yellow)">/healthz</code> — one-line liveness check.
-      <code style="font-family:var(--mono);color:var(--yellow)">/health.json</code> — the full report.
-      <code style="font-family:var(--mono);color:var(--yellow)">/data.json</code> — the complete tracking payload.
-    </p>
-    <details>
-      <summary>Show raw report</summary>
-      <pre class="out" id="raw">loading</pre>
-    </details>
-  </section>
+      <div class="check {{ 'on' if integrations.scraper.ok }}">
+        <i class="dot"></i>
+        <div class="t">
+          <b>Intake feed</b>
+          <div class="note">
+            {% if integrations.scraper.base == 'disabled' %}
+              switched off — SCRAPER_BASE=disabled
+            {% else %}{{ integrations.scraper.base }} — {{ integrations.scraper.note }}{% endif %}
+          </div>
+          <div class="why">The source that pulls threads and comments. Reddit closed its
+            API to new applications, so this is off by design until access is granted.
+            Nothing else depends on it.</div>
+        </div>
+        {% if integrations.scraper.ok %}<span class="tag-pill ok">online</span>
+        {% elif integrations.scraper.base == 'disabled' %}<span class="tag-pill warn">standby</span>
+        {% else %}<span class="tag-pill bad">unreachable</span>{% endif %}
+      </div>
+
+      <div class="check {{ 'on' if integrations.reddit_api.ok }}">
+        <i class="dot"></i>
+        <div class="t">
+          <b>Reddit API</b>
+          <div class="note">{{ integrations.reddit_api.note }}</div>
+          <div class="why">Direct read access. Requires an approved application under
+            Reddit's Responsible Builder Policy. Until then every check is manual.</div>
+        </div>
+        <span class="tag-pill {{ 'ok' if integrations.reddit_api.ok else 'warn' }}">
+          {{ 'online' if integrations.reddit_api.ok else 'pending' }}</span>
+      </div>
+
+      <div class="check {{ 'on' if integrations.generator.ok }}">
+        <i class="dot"></i>
+        <div class="t">
+          <b>Draft generator</b>
+          <div class="note">{{ integrations.generator.note }}</div>
+          <div class="why">Produces comment drafts from a formula you supply. It never
+            posts anything — output is copy-paste only.</div>
+        </div>
+        <span class="tag-pill {{ 'ok' if integrations.generator.ok else 'warn' }}">
+          {{ 'armed' if integrations.generator.ok else 'no formula' }}</span>
+      </div>
+
+      <div class="check on">
+        <i class="dot"></i>
+        <div class="t">
+          <b>Session</b>
+          <div class="note">operator {{ integrations.who.label }} · encrypted cookie</div>
+          <div class="why">Login is per-operator with a server-side secret. Terminating
+            the session clears it immediately.</div>
+        </div>
+        <span class="tag-pill ok">authenticated</span>
+      </div>
+
+      <div class="check on">
+        <i class="dot"></i>
+        <div class="t">
+          <b>Automation posture</b>
+          <div class="note">read-only · zero write access to Reddit</div>
+          <div class="why">VANTA never posts, votes, or messages. Every action on Reddit
+            is performed by you, by hand, from your own account.</div>
+        </div>
+        <span class="tag-pill key">manual</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Endpoints</h2>
+      <div class="row" style="margin-top:0">
+        <a class="btn" href="{{ url_for('data_json') }}" target="_blank" rel="noopener">data.json ↗</a>
+        <a class="btn" href="{{ url_for('health_json') }}" target="_blank" rel="noopener">health.json ↗</a>
+        <a class="btn" href="{{ url_for('logs_json') }}" target="_blank" rel="noopener">logs.json ↗</a>
+      </div>
+    </section>
+  </div>
+</main>
 </div>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
-<script>
-document.querySelector('details').addEventListener('toggle', function () {
-  if (!this.open || this.dataset.done) { return; }
-  this.dataset.done = '1';
-  fetch('/health.json').then(function (r) { return r.json(); }).then(function (d) {
-    document.getElementById('raw').textContent = JSON.stringify(d, null, 2);
-  }).catch(function () { document.getElementById('raw').textContent = 'could not load'; });
-});
-</script>
 </body>
 </html>

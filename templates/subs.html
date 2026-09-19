@@ -1,59 +1,63 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-<head>{% include "_head.html" %}<title>Subreddits — VANTA</title></head>
+<head>{% include "_head.html" %}<title>Nodes — VANTA</title></head>
 <body>
+<div class="shell">
 {% set nav = 'subs' %}
-{% set page_title = 'Subreddits' %}
-{% set page_sub = 'survival rate by community' %}
+{% set page_title = 'Nodes' %}
+{% set page_slug = 'nodes' %}
+{% set page_sub = 'survival rate per community' %}
 {% include "_shell.html" %}
 
-<div class="wrap">
-  <section class="panel flush">
-    <h2>Survival rate</h2>
-    <div class="tablewrap">
-      <table data-sortable>
-        <thead><tr><th>Subreddit</th><th>Posted</th><th>Survived</th><th>Gone</th>
-                   <th class="no">Rate</th><th>Verdict</th></tr></thead>
-        <tbody>
-        {% for r in table %}
-          <tr>
-            <td class="mono">r/{{ r.sub }}
-              {% if r.flagged %}<span class="tag bad">flagged</span>{% endif %}</td>
-            <td class="muted">{{ r.total }}</td>
-            <td class="muted">{{ r.survived }}</td>
-            <td class="muted">{{ r.gone }}</td>
-            <td>
-              <div class="meter">
-                <div class="bar {{ 'ok' if r.tone == 'good' else ('danger' if r.tone == 'bad' else '') }}">
-                  <i style="width:{{ r.rate }}%"></i>
+  <div class="view">
+    <section class="panel flush">
+      <h2>Node scorecard — {{ subs | length }}</h2>
+      <div class="scroll">
+        <table data-sortable>
+          <thead><tr>
+            <th class="no idx">#</th><th>Node</th><th class="num">Posted</th>
+            <th class="num">Lost</th><th>Survival</th><th>Verdict</th>
+          </tr></thead>
+          <tbody>
+          {% for s in subs %}
+            <tr>
+              <td class="idx">{{ '%02d' % loop.index }}</td>
+              <td class="mono">r/{{ s.subreddit }}</td>
+              <td class="num faint">{{ s.total }}</td>
+              <td class="num" style="color:{{ 'var(--red)' if s.deleted else 'var(--faint)' }}">{{ s.deleted }}</td>
+              <td>
+                <div class="meter">
+                  <div class="bar {{ 'ok' if s.survival_rate >= 0.8 else ('bad' if s.survival_rate < 0.5 else '') }}">
+                    <i style="width:{{ (s.survival_rate * 100) | round(0) | int }}%"></i>
+                  </div>
+                  <b>{{ (s.survival_rate * 100) | round(0) | int }}%</b>
                 </div>
-                <b>{{ r.rate }}%</b>
-              </div>
-            </td>
-            <td><span class="tag {{ 'good' if r.tone == 'good' else ('bad' if r.tone == 'bad' else 'key') }}">{{ r.verdict }}</span></td>
-          </tr>
-        {% else %}
-          <tr><td colspan="6" class="empty">
-            <strong>No data yet</strong>
-            Add comments to your <a href="{{ url_for('watch') }}">watchlist</a> and check them.
-          </td></tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </section>
+              </td>
+              <td>
+                {% if s.total < 5 %}<span class="tag-pill">insufficient data</span>
+                {% elif s.survival_rate >= 0.8 %}<span class="tag-pill ok">friendly</span>
+                {% elif s.survival_rate >= 0.5 %}<span class="tag-pill warn">mixed</span>
+                {% else %}<span class="tag-pill bad">hostile</span>{% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6" class="empty">
+              <strong>NO NODES</strong>
+              Register comments under Targets and verify them. Verdicts need 5 data points.
+            </td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
 
-  <section class="panel">
-    <h2>Scale</h2>
-    <p class="hint">
-      <b style="color:var(--green)">Friendly</b> — 75% or more of your comments still up.
-      <b style="color:var(--yellow)">Mixed</b> — 50 to 74%.
-      <b style="color:var(--red)">Hostile</b> — under half.
-      Fewer than {{ minimum }} comments reads <b style="color:var(--text)">too few to judge</b>;
-      one removal out of two proves nothing.<br><br>
-      These numbers only move when you check comments and mark them.
-    </p>
-  </section>
+    <div class="notice">
+      <p><b>How verdicts work.</b> Survival is comments still live divided by comments
+         posted, per node. Under 5 data points the verdict reads <b>insufficient data</b>
+         — a single removal out of two is noise, not a pattern.</p>
+    </div>
+  </div>
+</main>
 </div>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>

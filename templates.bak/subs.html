@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>{% include "_head.html" %}<title>Subreddits — VANTA</title></head>
+<body>
+{% set nav = 'subs' %}
+{% set page_title = 'Subreddits' %}
+{% set page_sub = 'survival rate by community' %}
+{% include "_shell.html" %}
+
+<div class="wrap">
+  <section class="panel flush">
+    <h2>Survival rate</h2>
+    <div class="tablewrap">
+      <table data-sortable>
+        <thead><tr><th>Subreddit</th><th>Posted</th><th>Survived</th><th>Gone</th>
+                   <th class="no">Rate</th><th>Verdict</th></tr></thead>
+        <tbody>
+        {% for r in table %}
+          <tr>
+            <td class="mono">r/{{ r.sub }}
+              {% if r.flagged %}<span class="tag bad">flagged</span>{% endif %}</td>
+            <td class="muted">{{ r.total }}</td>
+            <td class="muted">{{ r.survived }}</td>
+            <td class="muted">{{ r.gone }}</td>
+            <td>
+              <div class="meter">
+                <div class="bar {{ 'ok' if r.tone == 'good' else ('danger' if r.tone == 'bad' else '') }}">
+                  <i style="width:{{ r.rate }}%"></i>
+                </div>
+                <b>{{ r.rate }}%</b>
+              </div>
+            </td>
+            <td><span class="tag {{ 'good' if r.tone == 'good' else ('bad' if r.tone == 'bad' else 'key') }}">{{ r.verdict }}</span></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="empty">
+            <strong>No data yet</strong>
+            Add comments to your <a href="{{ url_for('watch') }}">watchlist</a> and check them.
+          </td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Scale</h2>
+    <p class="hint">
+      <b style="color:var(--green)">Friendly</b> — 75% or more of your comments still up.
+      <b style="color:var(--yellow)">Mixed</b> — 50 to 74%.
+      <b style="color:var(--red)">Hostile</b> — under half.
+      Fewer than {{ minimum }} comments reads <b style="color:var(--text)">too few to judge</b>;
+      one removal out of two proves nothing.<br><br>
+      These numbers only move when you check comments and mark them.
+    </p>
+  </section>
+</div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

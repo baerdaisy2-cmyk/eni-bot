@@ -1,33 +1,44 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-<head>{% include "_head.html" %}<title>Sign in — VANTA</title></head>
+<head>{% include "_head.html" %}<title>Authenticate — VANTA</title></head>
 <body>
-<div class="gate">
-  <div class="panel">
-    <div class="wordmark">
-      <svg class="mark" style="width:34px;height:34px" viewBox="0 0 28 28" aria-hidden="true">
-        <path d="M4 5 L14 23 L24 5" fill="none" stroke="var(--yellow)" stroke-width="2.6"
+<div class="auth">
+  <div class="card">
+    <div class="brand">
+      <svg viewBox="0 0 28 28" aria-hidden="true">
+        <path d="M4 5 L14 23 L24 5" fill="none" stroke="var(--green)" stroke-width="2.4"
               stroke-linecap="square" stroke-linejoin="miter"/>
-        <path d="M1 14 H27" fill="none" stroke="var(--yellow)" stroke-width="1" opacity=".45"/>
-        <rect x="12.4" y="19.4" width="3.2" height="3.2" fill="var(--yellow)"/>
+        <path d="M1 14 H27" fill="none" stroke="var(--cyan)" stroke-width="1" opacity=".6"/>
+        <rect x="12.4" y="19.4" width="3.2" height="3.2" fill="var(--green)"/>
       </svg>
+      <b>VANTA</b>
     </div>
-    <h1 style="font-size:24px;letter-spacing:.14em">VANTA</h1>
-    <p class="sub">restricted access</p>
 
-    {% if error %}<p class="err">{{ error }}</p>{% endif %}
+    <div class="boot" aria-hidden="true"></div>
 
-    <form method="post">
-      <div class="field {{ 'bad' if error }}">
-        <label for="user">Operator</label>
-        <input name="user" id="user" autocomplete="username" autofocus required>
+    {% if error %}<div class="err">&gt; {{ error }}</div>{% endif %}
+
+    <form method="post" autocomplete="off">
+      <div class="field">
+        <label for="u">Operator</label>
+        <input name="username" id="u" required autofocus autocapitalize="none"
+               autocomplete="username" spellcheck="false">
       </div>
-      <div class="field {{ 'bad' if error }}">
-        <label for="password">Passcode</label>
-        <input name="password" id="password" type="password" autocomplete="current-password" required>
+      <div class="field">
+        <label for="p">Passphrase</label>
+        <input name="password" id="p" type="password" required
+               autocomplete="current-password">
+        <button type="button" class="reveal" data-reveal="p" aria-label="Show password">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
       </div>
-      <button class="btn primary" type="submit">Sign in</button>
+      <button class="btn primary" type="submit">Establish connection</button>
     </form>
+
+    <div class="link-status"><i></i>STATUS: ENCRYPTED CONNECTION · TLS 1.3</div>
   </div>
 </div>
 <script src="{{ url_for('static', filename='app.js') }}"></script>

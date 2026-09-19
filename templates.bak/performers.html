@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>{% include "_head.html" %}<title>Performers — VANTA</title></head>
+<body>
+{% set nav = 'performers' %}
+{% set page_title = 'Performers' %}
+{% set page_sub = 'output · survival · rank' %}
+{% include "_shell.html" %}
+
+<div class="wrap">
+  <section class="grid">
+    <div class="card"><b>Comments made</b><i data-count="{{ tracking.total_comments_made }}">0</i></div>
+    <div class="card key"><b>Ranked 01</b><i data-count="{{ tracking.rank_1_count }}">0</i></div>
+    <div class="card"><b>Ranked 02—05</b><i data-count="{{ tracking.rank_medium_count }}">0</i></div>
+    <div class="card"><b>Ranked 06+</b><i data-count="{{ tracking.rank_low_count }}">0</i></div>
+  </section>
+
+  <section class="panel">
+    <h2>Leaderboard</h2>
+    {% for p in people %}
+    <div class="item">
+      <div class="pos">{{ '%02d' % loop.index }}</div>
+      <img class="av" style="width:34px;height:34px" src="{{ p.avatar }}" alt="" loading="lazy">
+      <div class="body">
+        <div class="meta"><b>{{ p.username }}</b></div>
+        <div class="txt" style="font-family:var(--mono);font-size:11px">
+          {% if p.account_age_days is not none %}account {{ p.account_age_days }} days old{% else %}account age unknown{% endif %}
+        </div>
+      </div>
+      <div class="nums">
+        <div><i>{{ p.comments_made }}</i><s>made</s></div>
+        <div><i>{{ p.rank_1_hits }}</i><s>rank 01</s></div>
+        <div><i>{{ p.survival_rate }}%</i><s>survived</s></div>
+      </div>
+    </div>
+    {% else %}
+    <p class="empty">
+      <strong>No one on the board</strong>
+      Add comments through the <a href="{{ url_for('watch') }}">watchlist</a> and whoever adds
+      them appears here.
+    </p>
+    {% endfor %}
+  </section>
+
+  <section class="panel">
+    <h2>Long-term performance</h2>
+    <div class="kv">
+      <div><s>Period</s><i>ALL TIME</i></div>
+      <div><s>Days running</s><i>{{ longterm.days_running }}</i></div>
+      <div><s>Posts tracked</s><i>{{ longterm.total_posts_tracked }}</i></div>
+      <div><s>Comments tracked</s><i>{{ longterm.total_comments_tracked }}</i></div>
+      <div><s>Threads scraped</s><i>{{ longterm.total_scrapes }}</i></div>
+      <div><s>Average rank</s><i class="key">{{ longterm.avg_rank or '—' }}</i></div>
+    </div>
+  </section>
+</div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>{% include "_head.html" %}<title>{{ post.title[:52] }} — VANTA</title></head>
+<body>
+{% set nav = 'dash' %}
+{% set page_title = post.title[:48] %}
+{% set page_sub = 'r/' ~ post.subreddit ~ ' · u/' ~ post.author %}
+{% include "_shell.html" %}
+
+<div class="wrap">
+  {% if post.blacklisted %}
+  <div class="notice bad"><p>Blacklisted. Your comments here keep vanishing — stop posting to this thread.</p></div>
+  {% endif %}
+  {% if has_marker %}
+  <div class="notice"><p>A comment in this thread carries your marker.</p></div>
+  {% endif %}
+
+  <section class="panel">
+    <h2>Thread</h2>
+    <div class="kv" style="margin-bottom:18px">
+      <div><s>Subreddit</s><i>r/{{ post.subreddit }}</i></div>
+      <div><s>Author</s><i>u/{{ post.author }}</i></div>
+      <div><s>Age</s><i>{{ post.created_utc | ago }}</i></div>
+      <div><s>Score</s><i class="key">{{ post.score }}</i></div>
+    </div>
+    <div class="row" style="margin-top:0">
+      <a class="btn" href="{{ post.permalink }}" target="_blank" rel="noopener">Open on Reddit</a>
+      <a class="btn ghost" href="{{ url_for('index') }}">Back</a>
+    </div>
+  </section>
+
+  {% if post.body %}
+  <section class="panel"><h2>Body</h2><div class="txt" style="white-space:pre-wrap">{{ post.body }}</div></section>
+  {% endif %}
+
+  <section class="panel">
+    <h2>Comments — {{ comments | length }}</h2>
+    {% for c in comments %}
+    <div class="item {{ 'gone' if c.deleted }}">
+      <div class="body">
+        <div class="meta">
+          <b>u/{{ c.author }}</b>
+          {% if c.is_ours %}<span class="tag good">ours</span>{% endif %}
+          {% if c.mentions_marker %}<span class="tag key">marker</span>{% endif %}
+          {% if c.deleted %}<span class="tag bad">deleted</span>{% endif %}
+          <span>{{ c.created_utc | ts }}</span>
+          <span>{{ c.score }} pts</span>
+        </div>
+        <div class="txt" style="white-space:pre-wrap">{{ c.body }}</div>
+        {% if c.deleted %}
+        <div class="txt" style="color:var(--red);font-family:var(--mono);font-size:11px;margin-top:8px">
+          gone by {{ c.deleted_at | ts }} · inferred: {{ c.delete_reason }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <p class="empty"><strong>No comments stored</strong>Add one from the watchlist to track this thread.</p>
+    {% endfor %}
+  </section>
+
+  <section class="panel">
+    <h2>Draft a reply</h2>
+    <div class="row" style="margin-top:0">
+      <button class="btn primary" id="gen" {{ 'disabled' if not can_generate }}>Generate comment</button>
+      <span class="hint">{{ 'Ready' if can_generate else 'Disabled until the comment formula lands' }}</span>
+    </div>
+    <pre class="out" id="out" hidden></pre>
+  </section>
+</div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+<script>
+var gen = document.getElementById('gen');
+if (gen && !gen.disabled) {
+  gen.addEventListener('click', function () {
+    var out = document.getElementById('out');
+    out.hidden = false; out.textContent = 'working';
+    fetch('/post/{{ post.id }}/generate', { method: 'POST' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { out.textContent = d.text || d.error; })
+      .catch(function () { out.textContent = 'request failed'; });
+  });
+}
+</script>
+</body>
+</html>
