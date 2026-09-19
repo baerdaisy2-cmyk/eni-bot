@@ -7,3 +7,4 @@ __pycache__/
 *.db-shm
 exports/
 ngrok.log
+scraper.py.bak-*
