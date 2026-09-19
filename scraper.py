@@ -76,33 +76,22 @@ STATUS_TTL = int(os.environ.get("SCRAPER_STATUS_TTL", "60"))
 
 
 def status(force=False):
-    """Is the local scraper reachable? Cached, never raises."""
-    now = time.time()
-    if not force and _STATUS_CACHE["value"] and (now - _STATUS_CACHE["at"]) < STATUS_TTL:
-        return _STATUS_CACHE["value"]
-
-    if SCRAPER_BASE.lower() in ("disabled", "off", "none", ""):
-        out = {"ok": False, "base": "disabled", "note": "turned off in .env"}
-        _STATUS_CACHE.update({"at": now, "value": out})
-        return out
-
-    try:
-        r = requests.get(SCRAPER_BASE + "/subreddits", timeout=1.5)
-        if r.status_code == 200:
-            data = r.json()
-            n = len(data) if isinstance(data, list) else len(data.get("subreddits", []))
-            out = {"ok": True, "base": SCRAPER_BASE, "note": "%d subreddits indexed" % n}
-        else:
-            out = {"ok": False, "base": SCRAPER_BASE, "note": "responded %d" % r.status_code}
-    except Exception as exc:
-        out = {"ok": False, "base": SCRAPER_BASE, "note": str(exc)[:70]}
-
+    """Report the current scrape source. Always Arctic Shift now."""
+    now = int(time.time())
+    out = {
+        "ok": True,
+        "base": "arctic-shift.photon-reddit.com",
+        "note": "using Arctic Shift archive (no API key, no auth)",
+    }
     _STATUS_CACHE.update({"at": now, "value": out})
     return out
 
 
+
 def disabled():
-    return SCRAPER_BASE.lower() in ("disabled", "off", "none", "")
+    """The scrape path uses Arctic Shift directly. No external service needed."""
+    return False
+
 
 
 def _get(path, params=None):
@@ -336,22 +325,26 @@ def remove_keyword(word):
 
 
 def _record_hit(word, sub, post_id, comment_id, author, body):
-    hid = "%s:%s" % (word, comment_id or post_id)
+    """Insert a keyword hit in one round trip. Idempotent on hit_id."""
+    import hashlib
+    key = "%s|%s|%s|%s|%s" % (word, sub, post_id, comment_id or "", author or "")
+    hid = hashlib.sha1(key.encode("utf-8")).hexdigest()[:16]
     now = int(time.time())
     con = db.connect()
-    exists = con.execute("SELECT 1 AS h FROM keyword_hits WHERE hit_id=?", (hid,)).fetchone()
-    if exists:
+    try:
+        con.execute(
+            """INSERT INTO keyword_hits
+               (hit_id, word, subreddit, post_id, comment_id, author, body, found_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(hit_id) DO NOTHING""",
+            (hid, word, sub or "", post_id or "", comment_id or "",
+             author or "", (body or "")[:600], now),
+        )
+        con.commit()
+    finally:
         con.close()
-        return False
-    con.execute("INSERT INTO keyword_hits (hit_id, word, subreddit, post_id, comment_id,"
-                " author, body, found_at) VALUES (?,?,?,?,?,?,?,?)",
-                (hid, word, sub or "", post_id or "", comment_id or "",
-                 author or "", (body or "")[:600], now))
-    con.execute("UPDATE keywords SET matches = matches + 1, last_detected = ? WHERE word = ?",
-                (now, word))
-    con.commit()
-    con.close()
     return True
+
 
 
 def scan_keywords_in(comments, sub, post_id):
@@ -372,31 +365,82 @@ def scan_keywords_in(comments, sub, post_id):
 
 
 def sweep_keywords():
-    """Ask the local scraper's database directly for every stored keyword."""
+    """Search each stored keyword within the configured subreddits, via Arctic Shift."""
     words = [k["word"] for k in keywords()]
     if not words:
         return 0, "no keywords set"
-    found = 0
-    for w in words:
-        safe = w.replace("'", "''")
-        sql = ("SELECT comment_id, post_permalink, author, body FROM comments "
-               "WHERE LOWER(body) LIKE '%%%s%%' LIMIT 200" % safe)
+
+    subs_raw = os.environ.get("SWEEP_SUBS", "").strip()
+    if not subs_raw:
         try:
-            rows = _get("/query", {"sql": sql})
-        except Exception as exc:
-            return found, "scraper unreachable: %s" % str(exc)[:70]
-        if isinstance(rows, dict):
-            rows = rows.get("results", rows.get("rows", []))
-        for r in rows or []:
-            link = r.get("post_permalink") or ""
-            sub = ""
-            parts = link.split("/r/")
-            if len(parts) > 1:
-                sub = parts[1].split("/")[0]
-            if _record_hit(w, sub, post_id_from(link), r.get("comment_id"),
-                           r.get("author"), r.get("body")):
-                found += 1
-    return found, "checked %d keyword(s)" % len(words)
+            con = db.connect()
+            rows = con.execute(
+                "SELECT DISTINCT subreddit FROM as_posts WHERE subreddit IS NOT NULL"
+            ).fetchall()
+            con.close()
+            subs = [r["subreddit"] for r in rows]
+        except Exception:
+            subs = []
+    else:
+        subs = [s.strip() for s in subs_raw.split(",") if s.strip()]
+
+    if not subs:
+        return 0, "no subreddits to sweep (set SWEEP_SUBS in .env)"
+
+    import arctic_shift
+
+    MIN_LEN = 4
+    found = 0
+    errors = 0
+    skipped = 0
+    last_err = ""
+
+    for w in words:
+        if len(w) < MIN_LEN:
+            skipped += 1
+            db.log("INFO", "scraper",
+                   "skipping %r: too short for Arctic Shift (min %d chars)"
+                   % (w, MIN_LEN), {"keyword": w})
+            continue
+
+        for sub in subs:
+            try:
+                posts = arctic_shift.search_posts(subreddit=sub, q=w, limit=25)
+            except Exception as exc:
+                errors += 1
+                last_err = str(exc)[:120]
+                db.log("WARN", "scraper", "sweep %r in r/%s failed: %s"
+                       % (w, sub, last_err), {"keyword": w, "subreddit": sub})
+                continue
+
+            if not posts:
+                continue
+
+            try:
+                import arctic_shift_db
+                arctic_shift_db.save_posts(posts)
+            except Exception as exc:
+                db.log("WARN", "scraper", "could not cache sweep posts for %r: %s"
+                       % (w, str(exc)[:120]), {"keyword": w})
+
+            for p in posts:
+                psub = p.get("subreddit") or sub
+                pid = p.get("id") or ""
+                author = p.get("author") or ""
+                text = p.get("title") or ""
+                if _record_hit(w, psub, pid, "", author, text):
+                    found += 1
+
+    tail = ""
+    if skipped:
+        tail += " (%d too short)" % skipped
+    if errors:
+        tail += " (%d error%s)" % (errors, "" if errors == 1 else "s")
+    if found == 0 and errors and not skipped:
+        return 0, "0 hits, last error: %s" % last_err
+    return found, "checked %d keyword(s) across %d subreddit(s)%s" % (
+        len(words), len(subs), tail)
+
 
 
 def keyword_hits(limit=80):

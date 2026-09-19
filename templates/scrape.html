@@ -5,35 +5,53 @@
 {% set nav = 'scrape' %}
 {% set page_title = 'Scraper' %}
 {% set page_sub = 'thread intake · ranked by upvotes' %}
+{% set off = status.base == 'disabled' %}
 {% include "_shell.html" %}
 
 <div class="wrap">
-  {% if not status.ok %}
-  <div class="notice bad">
-    <p>Local scraper unreachable at <b>{{ status.base }}</b> — {{ status.note }}.
-       Start it on this machine, or point <code>SCRAPER_BASE</code> at where it runs.</p>
-  </div>
+  {% if off %}
+  <section class="panel" style="border-left:2px solid var(--line-2)">
+    <h2>Standby</h2>
+    <p class="hint">
+      The scraper is switched off. Nothing is broken and nothing is being retried —
+      <code style="font-family:var(--mono);color:var(--yellow)">SCRAPER_BASE</code>
+      is set to <b style="color:var(--text)">disabled</b>.<br><br>
+      Reddit closed its API to new applications and blocks anonymous access, so there is
+      no source behind this page yet. When your API access request is approved, point
+      <code style="font-family:var(--mono);color:var(--yellow)">SCRAPER_BASE</code>
+      at a running source and this page works immediately — nothing else has to change.
+    </p>
+  </section>
+  {% else %}
+    {% if not status.ok %}
+    <div class="notice bad">
+      <p>Source unreachable at <b>{{ status.base }}</b> — {{ status.note }}.</p>
+    </div>
+    {% endif %}
+    {% if not enrich_ok and enrich_total %}
+    <div class="notice">
+      <p>Account-age lookup refused by reddit.com — {{ enrich_hits }} of {{ enrich_total }}
+         succeeded. Ages read <b>unknown</b> and avatars fall back to generated ones.</p>
+    </div>
+    {% endif %}
+    {% if error %}<div class="notice bad"><p>{{ error }}</p></div>{% endif %}
   {% endif %}
-  {% if not enrich_ok and enrich_total %}
-  <div class="notice">
-    <p>Account-age lookup refused by reddit.com — {{ enrich_hits }} of {{ enrich_total }}
-       succeeded. Ages read <b>unknown</b> and avatars fall back to generated ones.</p>
-  </div>
-  {% endif %}
-  {% if error %}<div class="notice bad"><p>{{ error }}</p></div>{% endif %}
 
   <section class="panel">
     <h2>Intake</h2>
     <form method="post">
       <div class="field">
         <label for="url">Reddit post URL or post id</label>
-        <input name="url" id="url" required autocomplete="off"
+        <input name="url" id="url" required autocomplete="off" {{ 'disabled' if off }}
                value="{{ payload.scraped_post.url if payload and payload.scraped_post else '' }}">
       </div>
       <div class="row" style="margin-top:0">
-        <button class="btn primary" type="submit">Scrape and enrich</button>
-        <span class="hint">Post and comment data from your local scraper. Ages from Reddit's
-          public user endpoint, cached once per username.</span>
+        <button class="btn primary" type="submit" {{ 'disabled' if off }}>Scrape and enrich</button>
+        <span class="hint">
+          {% if off %}Disabled until a source is configured.
+          {% else %}Post and comment data from your source. Ages from Reddit's public user
+          endpoint, cached once per username.{% endif %}
+        </span>
       </div>
     </form>
   </section>
@@ -75,15 +93,13 @@
         <div class="txt">{{ c.content }}</div>
       </div>
     </div>
-    {% else %}
-    <p class="empty"><strong>No comments returned</strong>The scraper has this post but no comments stored for it.</p>
     {% endfor %}
   </section>
-  {% elif not error %}
+  {% elif not off %}
   <section class="panel">
     <p class="empty">
       <strong>Nothing scraped yet</strong>
-      Paste a Reddit post URL above. The post must already exist in your local scraper's database.
+      Paste a Reddit post URL above.
     </p>
   </section>
   {% endif %}

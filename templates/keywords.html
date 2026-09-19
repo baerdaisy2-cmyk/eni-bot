@@ -5,13 +5,21 @@
 {% set nav = 'keywords' %}
 {% set page_title = 'Keywords' %}
 {% set page_sub = 'watch terms · live matches' %}
+{% set off = status.base == 'disabled' %}
 {% include "_shell.html" %}
 
 <div class="wrap">
-  {% if not status.ok %}
+  {% if off %}
+  <section class="panel" style="border-left:2px solid var(--line-2)">
+    <h2>Standby</h2>
+    <p class="hint">
+      Sweeps need a data source and none is configured. You can still add and remove
+      keywords — they are stored and will be checked the moment a source comes online.
+    </p>
+  </section>
+  {% elif not status.ok %}
   <div class="notice bad">
-    <p>Local scraper unreachable at <b>{{ status.base }}</b>. Sweeps need it running.
-       Matches found during a manual scrape are still recorded.</p>
+    <p>Source unreachable at <b>{{ status.base }}</b>. Sweeps need it running.</p>
   </div>
   {% endif %}
   {% if note %}<div class="notice"><p>{{ note }}</p></div>{% endif %}
@@ -44,8 +52,7 @@
       </div>
       <div class="row" style="margin-top:0">
         <button class="btn primary" type="submit">Add keyword</button>
-        <span class="hint">Case-insensitive. Matched against every comment body your local
-          scraper has stored.</span>
+        <span class="hint">Case-insensitive. Stored now, matched as soon as a source is live.</span>
       </div>
     </form>
     {% else %}
@@ -53,17 +60,19 @@
     {% endif %}
   </section>
 
+  {% if not off %}
   <section class="panel">
     <h2>Sweep</h2>
     <form method="post">
       <input type="hidden" name="action" value="sweep">
       <div class="row" style="margin-top:0">
         <button class="btn primary" type="submit">Run sweep now</button>
-        <span class="hint">Queries the scraper's database for every watched term.
-          Duplicates are never counted twice.</span>
+        <span class="hint">Queries the source for every watched term. Duplicates are
+          never counted twice.</span>
       </div>
     </form>
   </section>
+  {% endif %}
 
   <section class="panel">
     <h2>Matches — {{ hits | length }}</h2>
@@ -86,7 +95,8 @@
     {% else %}
     <p class="empty">
       <strong>No matches yet</strong>
-      Add a keyword, then run a sweep. Scraping a post also records any hits automatically.
+      {% if off %}Keywords are stored and waiting on a source.
+      {% else %}Add a keyword, then run a sweep.{% endif %}
     </p>
     {% endfor %}
   </section>
