@@ -101,15 +101,7 @@ def status(force=False):
     return out
 
 
-def disabled():
-    return SCRAPER_BASE.lower() in ("disabled", "off", "none", "")
-
-
 def _get(path, params=None):
-    if disabled():
-        raise LookupError(
-            "The scraper is switched off. Set SCRAPER_BASE in .env to a running "
-            "source to turn it back on.")
     r = requests.get(SCRAPER_BASE + path, params=params or {}, timeout=TIMEOUT)
     r.raise_for_status()
     return r.json()
