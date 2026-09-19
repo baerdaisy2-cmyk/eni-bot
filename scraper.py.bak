@@ -71,34 +71,17 @@ def iso(ts):
 
 
 # ------------------------------------------------------------------ status --
-_STATUS_CACHE = {"at": 0, "value": None}
-STATUS_TTL = int(os.environ.get("SCRAPER_STATUS_TTL", "60"))
-
-
-def status(force=False):
-    """Is the local scraper reachable? Cached, never raises."""
-    now = time.time()
-    if not force and _STATUS_CACHE["value"] and (now - _STATUS_CACHE["at"]) < STATUS_TTL:
-        return _STATUS_CACHE["value"]
-
-    if SCRAPER_BASE.lower() in ("disabled", "off", "none", ""):
-        out = {"ok": False, "base": "disabled", "note": "turned off in .env"}
-        _STATUS_CACHE.update({"at": now, "value": out})
-        return out
-
+def status():
+    """Is the local scraper reachable? Never raises."""
     try:
-        r = requests.get(SCRAPER_BASE + "/subreddits", timeout=1.5)
+        r = requests.get(SCRAPER_BASE + "/subreddits", timeout=4)
         if r.status_code == 200:
             data = r.json()
             n = len(data) if isinstance(data, list) else len(data.get("subreddits", []))
-            out = {"ok": True, "base": SCRAPER_BASE, "note": "%d subreddits indexed" % n}
-        else:
-            out = {"ok": False, "base": SCRAPER_BASE, "note": "responded %d" % r.status_code}
+            return {"ok": True, "base": SCRAPER_BASE, "note": "%d subreddits indexed" % n}
+        return {"ok": False, "base": SCRAPER_BASE, "note": "responded %d" % r.status_code}
     except Exception as exc:
-        out = {"ok": False, "base": SCRAPER_BASE, "note": str(exc)[:70]}
-
-    _STATUS_CACHE.update({"at": now, "value": out})
-    return out
+        return {"ok": False, "base": SCRAPER_BASE, "note": str(exc)[:90]}
 
 
 def _get(path, params=None):
