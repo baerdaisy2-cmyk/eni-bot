@@ -8,3 +8,5 @@ __pycache__/
 exports/
 ngrok.log
 scraper.py.bak-*
+*.bak-*
+templates.bak/
