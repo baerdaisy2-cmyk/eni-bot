@@ -5,91 +5,139 @@
 <div class="shell">
 {% set nav = 'scrape' %}
 {% set page_title = 'Intake' %}
-{% set page_slug = 'intake' %}
-{% set page_sub = 'thread capture · ranked' %}
-{% set off = status.base == 'disabled' %}
+{% set page_slug = 'scrape' %}
+{% set page_sub = 'paste URL · fetch thread' %}
 {% include "_shell.html" %}
 
-  <div class="view">
-    {% if off %}
-    <div class="notice warn">
-      <p><b>Feed standby.</b> <code>SCRAPER_BASE</code> is set to <b>disabled</b>.
-         Reddit closed its API to new applications and blocks anonymous reads, so no
-         source is attached. Point the variable at a live source and this page works
-         with no other change.</p>
-    </div>
-    {% else %}
-      {% if not status.ok %}
-      <div class="notice bad"><p>Source unreachable at <b>{{ status.base }}</b> — {{ status.note }}.</p></div>
-      {% endif %}
-      {% if not enrich_ok and enrich_total %}
-      <div class="notice warn"><p>Account-age lookup refused — {{ enrich_hits }} of {{ enrich_total }} resolved.
-        Ages read <b>unknown</b>.</p></div>
-      {% endif %}
-      {% if error %}<div class="notice bad"><p>{{ error }}</p></div>{% endif %}
-    {% endif %}
+<div class="view">
+  <div class="topbar-line">
+    <h1>Intake</h1>
+    <p class="sub">Paste a Reddit post URL. RedTrak fetches the thread, saves it, and scans for brand mentions.</p>
+  </div>
 
-    <section class="panel">
-      <h2>Capture</h2>
+  {% if error %}
+  <div class="rt-notice bad"><b>Error:</b> {{ error }}</div>
+  {% endif %}
+
+  <section class="rt-panel">
+    <div class="rt-panel-head"><h2>Fetch a thread</h2></div>
+    <div class="rt-panel-body">
       <form method="post">
-        <div class="field">
-          <label for="url">Post URL or id</label>
-          <input name="url" id="url" required autocomplete="off" spellcheck="false"
-                 {{ 'disabled' if off }}
-                 value="{{ payload.scraped_post.url if payload and payload.scraped_post else '' }}">
-        </div>
-        <div class="row" style="margin-top:0">
-          <button class="btn primary" type="submit" {{ 'disabled' if off }}>Execute capture</button>
-          <span class="hint">{% if off %}Locked until a source is configured.
-            {% else %}Pulls the thread and ranks comments by upvotes.{% endif %}</span>
+        <label class="rt-label">Reddit post URL or post ID</label>
+        <input class="rt-input" name="url" required autocomplete="off"
+               placeholder="https://www.reddit.com/r/IPTV/comments/abc123/title/">
+        <div class="rt-actions">
+          <button class="rt-btn primary" type="submit">Scrape and enrich</button>
+          <span class="rt-hint">Data from Arctic Shift. Ages from Reddit's public endpoint.</span>
         </div>
       </form>
-    </section>
+    </div>
+  </section>
 
-    {% if payload and payload.scraped_post %}
-    {% set p = payload.scraped_post %}
-    <section class="panel">
-      <h2>Source thread</h2>
-      <div class="item" style="border:0;padding:0">
-        <img class="av" style="width:38px;height:38px" src="{{ p.author.avatar }}" alt="" loading="lazy">
-        <div class="body">
-          <h3 style="margin-bottom:6px">{{ p.title }}</h3>
-          <div class="meta">
-            <span>r/{{ p.subreddit }}</span><span>u/{{ p.author.username }}</span>
-            <span>{% if p.author.account_age_days is not none %}{{ p.author.account_age_days }}d{% else %}age unknown{% endif %}</span>
-            <span>{{ p.upvotes }} up</span><span>{{ p.comment_count }} comments</span>
+  {% if payload and payload.scraped_post %}
+  {% set p = payload.scraped_post %}
+  <section class="rt-panel">
+    <div class="rt-panel-head"><h2>Source post</h2></div>
+    <div class="rt-panel-body">
+      <div class="sp-head">
+        <img class="sp-av" src="{{ p.author.avatar }}" alt="" loading="lazy">
+        <div>
+          <h3 class="sp-title">{{ p.title }}</h3>
+          <div class="sp-meta">
+            <span class="sp-sub">r/{{ p.subreddit }}</span>
+            <span>u/{{ p.author.username }}</span>
+            <span>{{ p.upvotes }} upvotes</span>
+            <span>{{ p.comment_count }} comments</span>
           </div>
         </div>
-        <a class="btn" href="{{ p.url }}" target="_blank" rel="noopener">Open ↗</a>
+        {% if p.url %}<a class="rt-btn" href="{{ p.url }}" target="_blank" rel="noopener">Open ↗</a>{% endif %}
       </div>
-    </section>
+    </div>
+  </section>
 
-    <section class="panel">
+  <section class="rt-panel">
+    <div class="rt-panel-head">
       <h2>Comments — {{ payload.comments | length }}</h2>
-      {% for c in payload.comments %}
-      <div class="item {{ 'gone' if c.is_deleted }}">
-        <div class="pos">{{ '%02d' % c.rank }}</div>
-        <img class="av" src="{{ c.author.avatar }}" alt="" loading="lazy">
-        <div class="body">
-          <div class="meta">
-            <b>u/{{ c.author.username }}</b>
-            <span style="color:var(--cyan)">{{ c.upvotes }} up</span>
-            <span>{% if c.author.account_age_days is not none %}{{ c.author.account_age_days }}d{% else %}age unknown{% endif %}</span>
-            {% if c.is_deleted %}<span class="tag-pill bad">removed</span>{% endif %}
-          </div>
-          <div class="txt">{{ c.content }}</div>
-        </div>
-      </div>
-      {% endfor %}
-    </section>
-    {% elif not off %}
-    <section class="panel">
-      <p class="empty"><strong>NO CAPTURE</strong>Paste a post URL above.</p>
-    </section>
-    {% endif %}
-  </div>
+      <span class="rt-hint">ranked by upvotes</span>
+    </div>
+    <div class="rt-panel-body rt-flush">
+      {% if payload.comments %}
+      <table class="rt-table">
+        <thead>
+          <tr>
+            <th style="width:40px">#</th>
+            <th style="width:60px"></th>
+            <th style="width:180px">Author</th>
+            <th>Comment</th>
+            <th style="width:100px;text-align:right">Upvotes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in payload.comments %}
+          <tr class="{% if c.is_deleted %}gone{% endif %}">
+            <td class="rt-idx">{{ '%02d' % loop.index }}</td>
+            <td><img class="cm-av" src="{{ c.author.avatar }}" alt="" loading="lazy"></td>
+            <td>
+              <b class="cm-user">u/{{ c.author.username }}</b>
+              {% if c.is_deleted %}<span class="rt-pill bad">removed</span>{% endif %}
+            </td>
+            <td class="rt-comment">{{ c.content }}</td>
+            <td class="rt-faint" style="text-align:right">{{ c.upvotes }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="rt-empty"><b>No comments yet</b>The thread may be fresh — Arctic Shift indexes new comments over a few hours.</div>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+</div>
 </main>
 </div>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
+
+<style>
+.topbar-line { margin-bottom: 12px; }
+.topbar-line h1 { margin: 0 0 4px; font-size: 26px; font-weight: 700; letter-spacing: -.01em; color: #E6EDF3; }
+.topbar-line .sub { color: #8B949E; font-size: 13px; margin: 0; }
+.rt-notice { padding: 10px 14px; border-radius: 8px; border: 1px solid #232A36; font-size: 13px; margin-bottom: 16px; color: #E6EDF3; }
+.rt-notice.bad { background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.3); }
+.rt-panel { background: #161B22; border: 1px solid #232A36; border-radius: 12px; margin-bottom: 18px; overflow: hidden; }
+.rt-panel-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #232A36; }
+.rt-panel-head h2 { margin: 0; font-size: 16px; font-weight: 700; color: #E6EDF3; }
+.rt-panel-body { padding: 18px; }
+.rt-panel-body.rt-flush { padding: 0; }
+.rt-hint { color: #8B949E; font-size: 12px; font-family: ui-monospace, monospace; }
+.rt-label { display: block; font-size: 12px; color: #8B949E; margin-bottom: 6px; font-family: ui-monospace, monospace; text-transform: uppercase; letter-spacing: .1em; }
+.rt-input { width: 100%; padding: 10px 12px; border-radius: 8px; background: #0B0F19; border: 1px solid #232A36; color: #E6EDF3; font: inherit; font-size: 13px; }
+.rt-input:focus { outline: none; border-color: #F97316; }
+.rt-actions { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.rt-btn { padding: 9px 16px; border-radius: 8px; border: 1px solid #232A36; background: #1C222C; color: #E6EDF3; font: inherit; font-size: 13px; cursor: pointer; text-decoration: none; display: inline-block; }
+.rt-btn.primary { background: #F97316; border-color: #F97316; color: #0B0F19; font-weight: 600; }
+.rt-btn.primary:hover { background: #FB923C; border-color: #FB923C; }
+
+.sp-head { display: flex; align-items: flex-start; gap: 14px; }
+.sp-av { width: 40px; height: 40px; border-radius: 50%; background: #232A36; flex: 0 0 40px; }
+.sp-title { margin: 0 0 6px; font-size: 16px; font-weight: 600; color: #E6EDF3; line-height: 1.35; }
+.sp-meta { display: flex; gap: 14px; font-size: 12px; color: #8B949E; font-family: ui-monospace, monospace; flex-wrap: wrap; }
+.sp-sub { color: #F97316; font-weight: 600; }
+
+.rt-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rt-table th { text-align: left; padding: 10px 14px; color: #8B949E; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; border-bottom: 1px solid #232A36; }
+.rt-table td { padding: 12px 14px; border-bottom: 1px solid #232A36; color: #E6EDF3; vertical-align: top; }
+.rt-table tr:last-child td { border-bottom: 0; }
+.rt-table tr:hover td { background: #1C222C; }
+.rt-table tr.gone td { opacity: .5; }
+.rt-idx { font-family: ui-monospace, monospace; color: #8B949E; font-size: 12px; }
+.cm-av { width: 24px; height: 24px; border-radius: 50%; background: #232A36; }
+.cm-user { color: #E6EDF3; font-weight: 600; font-size: 12.5px; }
+.rt-comment { color: #8B949E; font-size: 12.5px; line-height: 1.5; max-width: 720px; }
+.rt-pill { padding: 3px 8px; border-radius: 10px; font-size: 10px; font-family: ui-monospace, monospace; font-weight: 600; margin-left: 6px; }
+.rt-pill.bad { background: rgba(239,68,68,.12); color: #EF4444; }
+.rt-empty { text-align: center; padding: 40px 20px; color: #8B949E; font-size: 13px; }
+.rt-empty b { display: block; font-size: 15px; color: #E6EDF3; margin-bottom: 6px; }
+</style>
 </body>
 </html>

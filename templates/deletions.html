@@ -5,88 +5,152 @@
 <div class="shell">
 {% set nav = 'deletions' %}
 {% set page_title = 'Breaches' %}
-{% set page_slug = 'breaches' %}
-{% set page_sub = 'removals · threat surface' %}
+{% set page_slug = 'deletions' %}
+{% set page_sub = 'removal log · suspected causes' %}
 {% include "_shell.html" %}
 
-  <div class="view">
-    <section class="metrics">
-      <div class="metric red"><b>Total removed</b><i data-count="{{ stats.total_deleted }}">0</i></div>
-      <div class="metric amber"><b>Breach rate</b><i data-count="{{ (stats.deletion_rate * 100) | round(0) | int }}" data-suffix="%">0%</i></div>
-      <div class="metric red"><b>Sub 1h</b><i data-count="{{ fast }}">0</i><small>filter suspected</small></div>
-      <div class="metric"><b>Nodes seen</b><i data-count="{{ stats.aggressive_subreddits | length }}">0</i></div>
-    </section>
-
-    <section class="panel flush">
-      <h2>Threat surface by node</h2>
-      <div class="scroll">
-        <table data-sortable>
-          <thead><tr>
-            <th class="no idx">#</th><th>Node</th><th class="num">Seen</th>
-            <th class="num">Lost</th><th>Aggression</th>
-          </tr></thead>
-          <tbody>
-          {% for s in stats.aggressive_subreddits %}
-            <tr>
-              <td class="idx">{{ '%02d' % loop.index }}</td>
-              <td class="mono">r/{{ s.subreddit }}</td>
-              <td class="num faint">{{ s.total }}</td>
-              <td class="num" style="color:{{ 'var(--red)' if s.deletions else 'var(--faint)' }}">{{ s.deletions }}</td>
-              <td>
-                <div class="meter">
-                  <div class="bar bad"><i style="width:{{ (s.aggression_score * 100) | round(0) | int }}%"></i></div>
-                  <b style="color:var(--red)">{{ (s.aggression_score * 100) | round(0) | int }}%</b>
-                </div>
-              </td>
-            </tr>
-          {% else %}
-            <tr><td colspan="5" class="empty">
-              <strong>NO DATA</strong>
-              Nothing removed. Either the surface is clean or nothing has been verified yet.
-            </td></tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="panel flush">
-      <h2>Breach log — {{ recent | length }}</h2>
-      <div class="scroll">
-        <table data-sortable>
-          <thead><tr>
-            <th class="no idx">#</th><th>Node</th><th>Operator</th>
-            <th class="num">Removed</th><th>Assessment</th>
-          </tr></thead>
-          <tbody>
-          {% for d in recent %}
-            <tr>
-              <td class="idx">{{ '%02d' % loop.index }}</td>
-              <td class="mono muted">r/{{ d.subreddit or '?' }}</td>
-              <td class="faint tiny">{{ d.owner or '—' }}</td>
-              <td class="num faint">{{ d.deleted_at | ago }}</td>
-              <td>
-                {% if d.delete_reason == 'mod_or_filter_suspected' %}
-                  <span class="tag-pill bad">filter suspected</span>
-                {% else %}<span class="tag-pill">cause unknown</span>{% endif %}
-              </td>
-            </tr>
-          {% else %}
-            <tr><td colspan="5" class="empty"><strong>LOG EMPTY</strong>No removals recorded.</td></tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <div class="notice">
-      <p>Reddit never reports why a comment disappears. Removal inside one hour is
-         <b>consistent with</b> an automated filter, which is not proof. A node is only
-         judged after <b>{{ minimum }}</b> data points.</p>
-    </div>
+<div class="view">
+  <div class="topbar-line">
+    <h1>Breaches</h1>
+    <p class="sub">Every comment of yours that got removed, with the cause inferred — never claimed.</p>
   </div>
+
+  <section class="del-counters">
+    <div class="dc-card">
+      <div class="dc-head">Total removed</div>
+      <div class="dc-val dead">{{ stats.deleted or 0 }}</div>
+      <div class="dc-foot">across all tracked subs</div>
+    </div>
+    <div class="dc-card">
+      <div class="dc-head">Deletion rate</div>
+      <div class="dc-val warn">{{ ((stats.deletion_rate or 0) * 100) | round(0) | int }}%</div>
+      <div class="dc-foot">of your comments</div>
+    </div>
+    <div class="dc-card">
+      <div class="dc-head">Fast removals</div>
+      <div class="dc-val warn">{{ fast or 0 }}</div>
+      <div class="dc-foot">in under 1 hour</div>
+    </div>
+    <div class="dc-card">
+      <div class="dc-head">Min sample</div>
+      <div class="dc-val">{{ minimum }}</div>
+      <div class="dc-foot">comments to judge a sub</div>
+    </div>
+  </section>
+
+  {% if stats.aggressive_subreddits %}
+  <section class="rt-panel">
+    <div class="rt-panel-head">
+      <h2>Hostile subreddits</h2>
+      <span class="rt-hint">ranked by aggression score</span>
+    </div>
+    <div class="rt-panel-body rt-flush">
+      <table class="rt-table">
+        <thead>
+          <tr>
+            <th style="width:36px">#</th>
+            <th>Subreddit</th>
+            <th style="text-align:right;width:100px">Removed</th>
+            <th style="text-align:right;width:100px">Total</th>
+            <th style="width:220px">Aggression</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in stats.aggressive_subreddits[:8] %}
+          <tr>
+            <td class="rt-idx">{{ '%02d' % loop.index }}</td>
+            <td class="rt-mono">r/{{ s.subreddit }}</td>
+            <td style="text-align:right;color:#EF4444;font-family:ui-monospace,monospace">{{ s.deletions or 0 }}</td>
+            <td style="text-align:right;font-family:ui-monospace,monospace;color:#8B949E">{{ s.total or 0 }}</td>
+            <td>
+              <div class="del-bar-row">
+                <div class="del-bar"><i style="width:{{ ((s.aggression_score or 0) * 100) | round(0) | int }}%"></i></div>
+                <span class="del-bar-pct">{{ ((s.aggression_score or 0) * 100) | round(0) | int }}%</span>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="rt-panel">
+    <div class="rt-panel-head">
+      <h2>Recent removals</h2>
+      <span class="rt-hint">{{ recent | length }} shown</span>
+    </div>
+    <div class="rt-panel-body rt-flush">
+      {% if recent %}
+      <table class="rt-table">
+        <thead>
+          <tr>
+            <th style="width:180px">When</th>
+            <th style="width:180px">Subreddit</th>
+            <th>Comment ID</th>
+            <th style="width:180px">Cause</th>
+            <th style="width:140px">Operator</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in recent %}
+          <tr>
+            <td class="rt-faint mono">{{ r.deleted_at | ts if r.deleted_at else '—' }}</td>
+            <td class="rt-mono">r/{{ r.subreddit or '?' }}</td>
+            <td class="rt-faint mono">{{ r.id or '—' }}</td>
+            <td><span class="cause-tag">{{ r.delete_reason or 'unknown' }}</span></td>
+            <td class="rt-faint">{{ r.owner or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="rt-empty">
+        <b>No removals recorded yet</b>
+        When one of your comments disappears, it appears here.
+      </div>
+      {% endif %}
+    </div>
+  </section>
+</div>
 </main>
 </div>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
+
+<style>
+.topbar-line { margin-bottom: 12px; }
+.topbar-line h1 { margin: 0 0 4px; font-size: 26px; font-weight: 700; letter-spacing: -.01em; color: #E6EDF3; }
+.topbar-line .sub { color: #8B949E; font-size: 13px; margin: 0; }
+.del-counters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 22px; }
+@media (max-width: 900px) { .del-counters { grid-template-columns: repeat(2, 1fr); } }
+.dc-card { background: #161B22; border: 1px solid #232A36; border-radius: 12px; padding: 16px 18px; }
+.dc-head { color: #8B949E; font-size: 12px; margin-bottom: 10px; font-family: ui-monospace, monospace; text-transform: uppercase; letter-spacing: .08em; }
+.dc-val { font-size: 30px; font-weight: 700; font-family: ui-monospace, monospace; letter-spacing: -.02em; color: #E6EDF3; }
+.dc-val.dead { color: #EF4444; }
+.dc-val.warn { color: #F97316; }
+.dc-foot { margin-top: 6px; font-size: 11px; color: #8B949E; font-family: ui-monospace, monospace; }
+.rt-panel { background: #161B22; border: 1px solid #232A36; border-radius: 12px; margin-bottom: 18px; overflow: hidden; }
+.rt-panel-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #232A36; }
+.rt-panel-head h2 { margin: 0; font-size: 16px; font-weight: 700; color: #E6EDF3; }
+.rt-panel-body.rt-flush { padding: 0; }
+.rt-hint { color: #8B949E; font-size: 12px; font-family: ui-monospace, monospace; }
+.rt-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rt-table th { text-align: left; padding: 11px 16px; color: #8B949E; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; border-bottom: 1px solid #232A36; }
+.rt-table td { padding: 12px 16px; border-bottom: 1px solid #232A36; color: #E6EDF3; }
+.rt-table tr:last-child td { border-bottom: 0; }
+.rt-table tr:hover td { background: #1C222C; }
+.rt-idx { font-family: ui-monospace, monospace; color: #8B949E; font-size: 12px; }
+.rt-mono { font-family: ui-monospace, monospace; color: #F97316; font-size: 12.5px; }
+.rt-faint { color: #8B949E; font-size: 12px; }
+.mono { font-family: ui-monospace, monospace; }
+.del-bar-row { display: flex; align-items: center; gap: 10px; }
+.del-bar { flex: 1; height: 4px; background: #232A36; border-radius: 2px; overflow: hidden; }
+.del-bar i { display: block; height: 100%; background: #EF4444; }
+.del-bar-pct { font-family: ui-monospace, monospace; font-size: 12px; color: #EF4444; min-width: 40px; text-align: right; }
+.cause-tag { padding: 3px 8px; border-radius: 10px; font-size: 11px; font-family: ui-monospace, monospace; background: rgba(239,68,68,.12); color: #EF4444; }
+.rt-empty { text-align: center; padding: 40px 20px; color: #8B949E; font-size: 13px; }
+.rt-empty b { display: block; font-size: 15px; color: #E6EDF3; margin-bottom: 6px; }
+</style>
 </body>
 </html>

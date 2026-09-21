@@ -1,113 +1,111 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-<head>{% include "_head.html" %}<title>{{ post.title[:44] }} — RedTrak</title></head>
+<head>{% include "_head.html" %}<title>{{ post.title[:60] }} — RedTrak</title></head>
 <body>
 <div class="shell">
-{% set nav = 'dash' %}
-{% set page_title = 'Thread' %}
-{% set page_slug = 'thread' %}
-{% set page_sub = 'r/' ~ (post.subreddit or '?') %}
+{% set nav = 'post' %}
+{% set page_title = 'Post detail' %}
+{% set page_slug = 'post' %}
+{% set page_sub = post.subreddit or '' %}
 {% include "_shell.html" %}
 
-  <div class="view">
-    {% if post.blacklisted %}
-    <div class="notice bad">
-      <p><b>Node blacklisted.</b> Two or more of your comments were removed here.
-         Ranking is zeroed and this thread is excluded.</p>
-    </div>
-    {% endif %}
-    {% if has_marker %}
-    <div class="notice"><p>A comment in this thread carries your marker.</p></div>
-    {% endif %}
-
-    <section class="panel">
-      <h2>Target thread</h2>
-      <h3 style="margin-bottom:9px">{{ post.title }}</h3>
-      <div class="item" style="border:0;padding:0">
-        <div class="body">
-          <div class="meta">
-            <span>r/{{ post.subreddit or '?' }}</span>
-            <span>u/{{ post.author or '?' }}</span>
-            <span>{{ post.score or 0 }} up</span>
-            <span>{{ post.num_comments or 0 }} comments</span>
-            <span>{{ post.created_utc | ago }} old</span>
-          </div>
-        </div>
-        {% if post.permalink %}
-        <a class="btn" href="{{ post.permalink }}" target="_blank" rel="noopener">Open on Reddit ↗</a>
-        {% endif %}
-      </div>
-      {% if post.body %}<div class="txt" style="margin-top:14px;white-space:pre-wrap">{{ post.body }}</div>{% endif %}
-    </section>
-
-    <section class="panel">
-      <h2>Draft generator</h2>
-      <div class="row" style="margin-top:0">
-        <button class="btn primary" id="gen" {{ 'disabled' if not can_generate }}>Generate draft</button>
-        <span class="hint">
-          {% if can_generate %}Draft only. You review it, you post it, you register the link.
-          {% else %}No formula loaded. The generator stays off rather than inventing text
-          in your name.{% endif %}
-        </span>
-      </div>
-      <pre class="out" id="out" hidden></pre>
-    </section>
-
-    <section class="panel">
-      <h2>Comments — {{ comments | length }}</h2>
-      {% for c in comments %}
-      <div class="item {{ 'gone' if c.deleted }}">
-        <div class="pos">{{ '%02d' % loop.index }}</div>
-        <div class="body">
-          <div class="meta">
-            <b>u/{{ c.author }}</b>
-            <span style="color:var(--cyan)">{{ c.score or 0 }} up</span>
-            <span>{{ c.created_utc | ts }}</span>
-            {% if c.is_ours %}<span class="tag-pill ok">ours</span>{% endif %}
-            {% if c.mentions_marker %}<span class="tag-pill key">marker</span>{% endif %}
-            {% if c.deleted %}<span class="tag-pill bad">removed</span>{% endif %}
-          </div>
-          <div class="txt">{{ c.body }}</div>
-          {% if c.deleted %}
-          <div class="mono tiny" style="margin-top:6px;color:var(--red)">
-            gone by {{ c.deleted_at | ts }} · {{ c.delete_reason }}
-          </div>
-          {% endif %}
-        </div>
-      </div>
-      {% else %}
-      <p class="empty"><strong>NO COMMENTS</strong>Nothing captured for this thread.</p>
-      {% endfor %}
-    </section>
+<div class="view">
+  <div class="topbar-line">
+    <h1>{{ post.title[:120] }}</h1>
+    <p class="sub">
+      <span class="rt-mono">r/{{ post.subreddit or '?' }}</span>
+      · u/{{ post.author or '?' }}
+      {% if post.created_utc %}· {{ post.created_utc | ts }}{% endif %}
+    </p>
   </div>
+
+  {% if post.body %}
+  <section class="rt-panel">
+    <div class="rt-panel-head"><h2>Post body</h2></div>
+    <div class="rt-panel-body">
+      <div class="rt-body">{{ post.body[:2000] }}{% if post.body|length > 2000 %}…{% endif %}</div>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if has_marker %}
+  <div class="rt-notice warn">⚠ This thread contains a marker match.</div>
+  {% endif %}
+
+  <section class="rt-panel">
+    <div class="rt-panel-head">
+      <h2>Comments — {{ comments | length }}</h2>
+      <span class="rt-hint">ordered by creation time</span>
+    </div>
+    <div class="rt-panel-body rt-flush">
+      {% if comments %}
+      <table class="rt-table">
+        <thead>
+          <tr>
+            <th style="width:40px">#</th>
+            <th style="width:180px">Author</th>
+            <th>Comment</th>
+            <th style="width:90px;text-align:right">Score</th>
+            <th style="width:120px">State</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in comments %}
+          <tr>
+            <td class="rt-idx">{{ '%02d' % loop.index }}</td>
+            <td>
+              <span class="rt-faint">u/{{ c.author or '[deleted]' }}</span>
+              {% if c.is_ours %}<span class="rt-pill ok">ours</span>{% endif %}
+            </td>
+            <td class="rt-comment">{{ (c.body or '')[:400] }}{% if c.body and c.body|length > 400 %}…{% endif %}</td>
+            <td class="rt-faint" style="text-align:right">{{ c.score or 0 }}</td>
+            <td>
+              {% if c.deleted %}<span class="rt-pill bad">removed</span>
+              {% elif c.mentions_marker %}<span class="rt-pill warn">marker</span>
+              {% else %}<span class="rt-pill ok">live</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="rt-empty"><b>No comments yet</b>The thread may not have been scraped yet.</div>
+      {% endif %}
+    </div>
+  </section>
+</div>
 </main>
 </div>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
-<script>
-(function () {
-  var gen = document.getElementById('gen');
-  if (!gen || gen.disabled) { return; }
-  gen.addEventListener('click', function () {
-    gen.disabled = true;
-    gen.textContent = 'Executing';
-    fetch('{{ url_for("generate", pid=post.id) }}', { method: 'POST' })
-      .then(function (r) { return r.json(); })
-      .then(function (d) {
-        var out = document.getElementById('out');
-        out.hidden = false;
-        out.textContent = d.text || d.error || 'no response';
-        gen.disabled = false;
-        gen.textContent = 'Generate draft';
-      })
-      .catch(function (e) {
-        var out = document.getElementById('out');
-        out.hidden = false;
-        out.textContent = 'request failed: ' + e;
-        gen.disabled = false;
-        gen.textContent = 'Generate draft';
-      });
-  });
-})();
-</script>
+
+<style>
+.topbar-line { margin-bottom: 14px; }
+.topbar-line h1 { margin: 0 0 6px; font-size: 24px; font-weight: 700; letter-spacing: -.01em; color: #E6EDF3; line-height: 1.3; }
+.topbar-line .sub { color: #8B949E; font-size: 13px; margin: 0; }
+.rt-mono { font-family: ui-monospace, monospace; color: #F97316; font-size: 12.5px; }
+.rt-notice { padding: 10px 14px; border-radius: 8px; border: 1px solid #232A36; font-size: 13px; margin-bottom: 16px; color: #E6EDF3; }
+.rt-notice.warn { background: rgba(251,191,36,.08); border-color: rgba(251,191,36,.3); }
+.rt-panel { background: #161B22; border: 1px solid #232A36; border-radius: 12px; margin-bottom: 18px; overflow: hidden; }
+.rt-panel-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #232A36; }
+.rt-panel-head h2 { margin: 0; font-size: 16px; font-weight: 700; color: #E6EDF3; }
+.rt-panel-body { padding: 18px; }
+.rt-panel-body.rt-flush { padding: 0; }
+.rt-hint { color: #8B949E; font-size: 12px; font-family: ui-monospace, monospace; }
+.rt-body { color: #E6EDF3; font-size: 13px; line-height: 1.6; white-space: pre-wrap; }
+.rt-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rt-table th { text-align: left; padding: 11px 16px; color: #8B949E; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; border-bottom: 1px solid #232A36; }
+.rt-table td { padding: 12px 16px; border-bottom: 1px solid #232A36; color: #E6EDF3; vertical-align: top; }
+.rt-table tr:last-child td { border-bottom: 0; }
+.rt-table tr:hover td { background: #1C222C; }
+.rt-idx { font-family: ui-monospace, monospace; color: #8B949E; font-size: 12px; }
+.rt-faint { color: #8B949E; font-size: 12px; font-family: ui-monospace, monospace; }
+.rt-comment { color: #8B949E; font-size: 12.5px; line-height: 1.5; max-width: 720px; }
+.rt-pill { padding: 3px 8px; border-radius: 10px; font-size: 10px; font-family: ui-monospace, monospace; font-weight: 600; margin-left: 6px; }
+.rt-pill.ok { background: rgba(34,197,94,.12); color: #22C55E; }
+.rt-pill.bad { background: rgba(239,68,68,.12); color: #EF4444; }
+.rt-pill.warn { background: rgba(251,191,36,.14); color: #FBBF24; }
+.rt-empty { text-align: center; padding: 40px 20px; color: #8B949E; font-size: 13px; }
+.rt-empty b { display: block; font-size: 15px; color: #E6EDF3; margin-bottom: 6px; }
+</style>
 </body>
 </html>

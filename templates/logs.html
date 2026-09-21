@@ -5,71 +5,83 @@
 <div class="shell">
 {% set nav = 'logs' %}
 {% set page_title = 'Console' %}
-{% set page_slug = 'console' %}
-{% set page_sub = 'event stream' %}
+{% set page_slug = 'logs' %}
+{% set page_sub = 'every action · plain English' %}
 {% include "_shell.html" %}
 
-  <div class="view">
-    <div class="chips">
-      <a class="chip {{ 'hot' if not level }}" href="{{ url_for('logs_view') }}">
-        <b>ALL</b><s>{{ counts.values() | sum }}</s></a>
-      {% for lv in ['INFO','WARN','ERROR'] %}
-      <a class="chip {{ 'hot' if level == lv }}" href="{{ url_for('logs_view', level=lv) }}">
-        <b>{{ lv }}</b><s>{{ counts.get(lv, 0) }}</s></a>
-      {% endfor %}
-    </div>
-
-    <section class="panel">
-      <h2>Live stream — {{ rows | length }} events</h2>
-      <div class="console" style="max-height:440px">
-        {% for l in rows | reverse %}
-        <div class="ln">
-          <span class="ts">{{ l.ts | ts }}</span>
-          <span class="tag {{ l.level | lower }}">[{{ l.level }}]</span>
-          <span class="msg">{{ l.message }}</span>
-        </div>
-        {% else %}
-        <div class="ln"><span class="msg">no events recorded</span></div>
-        {% endfor %}
-        <div class="ln"><span class="cursor">█</span></div>
-      </div>
-      <div class="row">
-        <a class="btn ghost" href="{{ url_for('logs_json') }}" target="_blank" rel="noopener">Raw JSON ↗</a>
-      </div>
-    </section>
-
-    <section class="panel flush">
-      <h2>Structured events</h2>
-      <div class="scroll">
-        <table data-sortable>
-          <thead><tr>
-            <th class="no idx">#</th><th>Time</th><th>Level</th><th>Actor</th>
-            <th>Event</th><th class="no">Context</th>
-          </tr></thead>
-          <tbody>
-          {% for l in rows %}
-            <tr>
-              <td class="idx">{{ '%02d' % loop.index }}</td>
-              <td class="mono faint">{{ l.ts | ts }}</td>
-              <td><span class="lvl {{ l.level | lower }}">{{ l.level }}</span></td>
-              <td class="mono faint tiny">{{ l.actor }}</td>
-              <td>{{ l.message }}</td>
-              <td>
-                {% if l.context and l.context != '{}' %}
-                <details><summary>context</summary><pre class="out">{{ l.context }}</pre></details>
-                {% else %}<span class="faint tiny">—</span>{% endif %}
-              </td>
-            </tr>
-          {% else %}
-            <tr><td colspan="6" class="empty"><strong>NO EVENTS</strong>Nothing logged yet.</td></tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </section>
+<div class="view">
+  <div class="topbar-line">
+    <h1>Console</h1>
+    <p class="sub">Every action RedTrak takes, in plain English. Newest first.</p>
   </div>
+
+  <div class="logs-filters">
+    <a class="logs-filter {% if not level %}on{% endif %}" href="{{ url_for('logs_view') }}">All</a>
+    {% for lvl in ['INFO', 'WARN', 'ERROR', 'DEBUG'] %}
+    <a class="logs-filter {% if level == lvl %}on{% endif %}" href="{{ url_for('logs_view', level=lvl) }}">
+      {{ lvl }} <span class="lf-count">{{ counts.get(lvl, 0) }}</span>
+    </a>
+    {% endfor %}
+  </div>
+
+  <section class="rt-panel">
+    <div class="rt-panel-body rt-flush">
+      {% if rows %}
+      <table class="rt-table logs-table">
+        <thead>
+          <tr>
+            <th style="width:170px">Time</th>
+            <th style="width:90px">Level</th>
+            <th style="width:110px">Source</th>
+            <th>Message</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td class="rt-faint mono">{{ r.ts | ts }}</td>
+            <td><span class="lvl-tag {{ r.level | lower }}">{{ r.level }}</span></td>
+            <td class="rt-mono">{{ r.source or '—' }}</td>
+            <td>{{ r.message or '' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="rt-empty"><b>No events recorded</b>Run a scrape or a refresh to populate the log.</div>
+      {% endif %}
+    </div>
+  </section>
+</div>
 </main>
 </div>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
+
+<style>
+.topbar-line { margin-bottom: 12px; }
+.topbar-line h1 { margin: 0 0 4px; font-size: 26px; font-weight: 700; letter-spacing: -.01em; color: #E6EDF3; }
+.topbar-line .sub { color: #8B949E; font-size: 13px; margin: 0; }
+.logs-filters { display: flex; gap: 6px; margin-bottom: 16px; }
+.logs-filter { padding: 6px 12px; border-radius: 20px; background: #161B22; border: 1px solid #232A36; color: #8B949E; font-size: 12px; font-family: ui-monospace, monospace; text-decoration: none; }
+.logs-filter.on { background: rgba(249,115,22,.14); border-color: rgba(249,115,22,.4); color: #F97316; }
+.lf-count { opacity: .7; margin-left: 4px; }
+.rt-panel { background: #161B22; border: 1px solid #232A36; border-radius: 12px; overflow: hidden; }
+.rt-panel-body.rt-flush { padding: 0; }
+.rt-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rt-table th { text-align: left; padding: 11px 16px; color: #8B949E; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; border-bottom: 1px solid #232A36; }
+.rt-table td { padding: 10px 16px; border-bottom: 1px solid #232A36; color: #E6EDF3; }
+.rt-table tr:last-child td { border-bottom: 0; }
+.rt-table tr:hover td { background: #1C222C; }
+.rt-mono { font-family: ui-monospace, monospace; color: #F97316; font-size: 12px; }
+.rt-faint { color: #8B949E; font-size: 12px; }
+.mono { font-family: ui-monospace, monospace; }
+.lvl-tag { padding: 3px 8px; border-radius: 10px; font-size: 10px; font-family: ui-monospace, monospace; font-weight: 700; }
+.lvl-tag.info  { background: rgba(34,197,94,.12); color: #22C55E; }
+.lvl-tag.warn  { background: rgba(251,191,36,.14); color: #FBBF24; }
+.lvl-tag.error { background: rgba(239,68,68,.12); color: #EF4444; }
+.lvl-tag.debug { background: rgba(139,148,158,.12); color: #8B949E; }
+.rt-empty { text-align: center; padding: 40px 20px; color: #8B949E; font-size: 13px; }
+.rt-empty b { display: block; font-size: 15px; color: #E6EDF3; margin-bottom: 6px; }
+</style>
 </body>
 </html>
