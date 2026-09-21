@@ -175,6 +175,19 @@ class Connection:
             return Cursor(cur)
         return Cursor(self._raw.execute(sql, args))
 
+    def executemany(self, sql, rows):
+        """Batch execute. One round trip for the whole list of rows."""
+        rows = [tuple(r) for r in rows if r]
+        if not rows:
+            return 0
+        if IS_PG:
+            cur = self._raw.cursor()
+            cur.executemany(_PLACEHOLDER.sub("%s", sql), rows)
+            cur.close()
+        else:
+            self._raw.executemany(sql, rows)
+        return len(rows)
+
     def executescript(self, sql):
         if IS_PG:
             with self._raw.cursor() as cur:
