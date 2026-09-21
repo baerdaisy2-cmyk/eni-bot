@@ -543,48 +543,58 @@ details[open] summary::before{content:"[-] "}
 .burger svg{width:16px;height:16px;stroke:var(--text);fill:none;stroke-width:1.7}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
-
-/* --- RedTrak sidebar overrides (matches realm/radar prototype) --- */
+/* --- RedTrak sidebar — realm/radar prototype --- */
 .rail {
-  width: 220px !important;
+  width: 230px !important;
   background: #0C0E12 !important;
   border-right: 1px solid #1F242D !important;
-  padding: 20px 14px !important;
+  padding: 22px 14px 14px !important;
   display: flex !important;
   flex-direction: column !important;
   gap: 4px !important;
+  position: sticky !important;
+  top: 0 !important;
+  height: 100vh !important;
+  overflow-y: auto !important;
 }
 
 .rail .logo {
   display: flex !important;
   flex-direction: column !important;
   align-items: flex-start !important;
-  gap: 10px !important;
-  padding: 4px 8px 20px !important;
-  border-bottom: 0 !important;
+  gap: 12px !important;
+  padding: 6px 10px 22px !important;
   text-decoration: none !important;
+  border: 0 !important;
+}
+
+.rail .logo svg {
+  display: block !important;
+  width: 34px !important;
+  height: 34px !important;
 }
 
 .rail .logo b {
-  font-size: 17px !important;
+  font-size: 19px !important;
   font-weight: 800 !important;
   color: #FFFFFF !important;
-  letter-spacing: -.02em !important;
-  font-family: 'Inter', system-ui, sans-serif !important;
+  letter-spacing: -.025em !important;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+  line-height: 1 !important;
 }
 
 .rail .logo b em {
   color: #FF5500 !important;
   font-style: normal !important;
-  font-weight: 700 !important;
-  padding: 0 2px !important;
+  font-weight: 800 !important;
+  padding: 0 4px !important;
 }
 
 .rail nav {
   display: flex !important;
   flex-direction: column !important;
-  gap: 2px !important;
-  margin-top: 6px !important;
+  gap: 3px !important;
+  margin-top: 4px !important;
 }
 
 .rail nav a {
@@ -597,7 +607,7 @@ details[open] summary::before{content:"[-] "}
   font-size: 14px !important;
   font-weight: 500 !important;
   text-decoration: none !important;
-  transition: background .12s ease, color .12s ease !important;
+  transition: background .1s ease, color .1s ease !important;
   position: relative !important;
 }
 
@@ -607,6 +617,7 @@ details[open] summary::before{content:"[-] "}
   stroke: currentColor !important;
   fill: none !important;
   flex: 0 0 18px !important;
+  opacity: .9 !important;
 }
 
 .rail nav a:hover {
@@ -620,14 +631,194 @@ details[open] summary::before{content:"[-] "}
   font-weight: 600 !important;
 }
 
-.rail nav a.on::before {
-  display: none !important;
+.rail nav a.on::before { display: none !important; }
+.rail nav a.on svg { stroke: #FF5500 !important; opacity: 1 !important; }
+
+/* user block bottom-left */
+.user-block {
+  margin-top: auto !important;
+  padding-top: 14px !important;
+  border-top: 1px solid #1F242D !important;
+  position: relative !important;
 }
 
-.rail nav a.on svg {
-  stroke: #FF5500 !important;
+.user-btn {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  padding: 8px 10px !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  color: #E6EDF3 !important;
+  font: inherit !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: background .12s ease !important;
+  text-align: left !important;
 }
 
-/* kill the old secondary "System" section if any of its markup remains */
+.user-btn:hover { background: #12151B !important; }
+
+.user-avatar {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50% !important;
+  background: #1F242D !important;
+  display: grid !important;
+  place-items: center !important;
+  flex: 0 0 28px !important;
+  color: #8A92A6 !important;
+}
+.user-avatar svg { width: 16px !important; height: 16px !important; }
+
+.user-name {
+  flex: 1 !important;
+  color: #FFFFFF !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+}
+
+.user-caret {
+  width: 14px !important;
+  height: 14px !important;
+  color: #8A92A6 !important;
+  transition: transform .15s ease !important;
+}
+.user-btn[aria-expanded="true"] .user-caret { transform: rotate(180deg) !important; }
+
+.user-menu {
+  position: absolute !important;
+  bottom: calc(100% + 6px) !important;
+  left: 0 !important;
+  right: 0 !important;
+  background: #12151B !important;
+  border: 1px solid #1F242D !important;
+  border-radius: 10px !important;
+  padding: 6px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.4) !important;
+  z-index: 100 !important;
+}
+
+.user-menu[hidden] { display: none !important; }
+
+.user-menu a {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 9px 12px !important;
+  border-radius: 6px !important;
+  color: #E6EDF3 !important;
+  font-size: 13px !important;
+  text-decoration: none !important;
+  font-weight: 500 !important;
+}
+
+.user-menu a:hover { background: #1F242D !important; }
+.user-menu a svg { width: 16px !important; height: 16px !important; flex: 0 0 16px !important; }
+.user-menu a.kill { color: #EF4444 !important; }
+.user-menu a.kill:hover { background: rgba(239,68,68,.1) !important; }
+
 .rail .rail-label { display: none !important; }
 .rail .rail-foot { display: none !important; }
+
+/* --- RedTrak: sidebar always expanded (no collapse) --- */
+.rail nav a span,
+.rail .logo b,
+.rail .logo b em,
+.rail-foot span,
+.rail-label {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.shell,
+.rail {
+  /* ensure the shell never collapses */
+}
+
+
+/* --- RedTrak: lock the shell to expanded layout --- */
+.shell {
+  display: grid !important;
+  grid-template-columns: 230px 1fr !important;
+  min-height: 100vh !important;
+  width: 100% !important;
+}
+
+.shell .rail {
+  width: 230px !important;
+  min-width: 230px !important;
+  max-width: 230px !important;
+}
+
+.shell .main,
+.shell main.main {
+  margin-left: 0 !important;
+  padding-left: 32px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+/* kill any old compact offset */
+.shell:not(.expanded) .rail { width: 230px !important; }
+.shell:not(.expanded) .main { margin-left: 0 !important; padding-left: 32px !important; }
+
+/* wordmark */
+.rail .logo b em { color: #FF5500 !important; font-style: normal !important; font-weight: 800 !important; }
+.rail .logo b { font-size: 20px !important; font-weight: 800 !important; letter-spacing: -.03em !important; }
+
+
+/* --- RedTrak: user avatar image --- */
+.user-avatar {
+  position: relative !important;
+  overflow: hidden !important;
+}
+.user-avatar img {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 50% !important;
+  display: block !important;
+}
+.user-avatar .fallback { position: relative !important; z-index: 0 !important; }
+.user-avatar img + .fallback { display: none !important; }
+.user-avatar.no-img img { display: none !important; }
+.user-avatar.no-img .fallback { display: block !important; }
+
+/* --- RedTrak: top bar breathing room + Tracking chip fix --- */
+.main, main.main {
+  padding: 24px 32px 60px !important;
+  overflow-x: hidden !important;
+}
+
+.main .view,
+main.main .view {
+  max-width: 100% !important;
+  overflow: visible !important;
+}
+
+.chip-brand {
+  white-space: nowrap !important;
+  overflow: visible !important;
+  display: inline-flex !important;
+  max-width: none !important;
+}
+
+.view > div:first-of-type,
+.ov-topbar {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: flex-start !important;
+  gap: 16px !important;
+}
+
+.ov-topbar h1,
+.view h1 {
+  white-space: nowrap !important;
+}

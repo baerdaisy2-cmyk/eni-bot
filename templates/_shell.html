@@ -2,15 +2,18 @@
 {% set scr = ints.get('scraper', {}) if ints else {} %}
 {% set who = ints.get('who', {}) if ints else {} %}
 {% set store = ints.get('store', {}) if ints else {} %}
-{% set whoname = who.get('label') or 'local' %}
+{% set whoname = who.get('label') or 'Bl4ckhat' %}
+{% set reddit_name = config.REDDIT_USERNAME if config is defined else '' %}
+{% if reddit_name %}{% set whoname = reddit_name %}{% endif %}
 <aside class="rail">
+
   <a class="logo" href="{{ url_for('index') }}">
-    <svg viewBox="0 0 32 32" aria-hidden="true" width="32" height="32">
-      <rect x="2" y="2" width="28" height="28" rx="8" fill="#FF5500"/>
-      <circle cx="16" cy="13" r="3" fill="#0C0E12"/>
-      <path d="M9 24c1-4 4-6 7-6s6 2 7 6" stroke="#0C0E12" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <svg viewBox="0 0 32 32" aria-hidden="true" width="34" height="34">
+      <rect x="1" y="1" width="30" height="30" rx="9" fill="#FF5500"/>
+      <circle cx="16" cy="13" r="2.6" fill="#0C0E12"/>
+      <path d="M10 23c1-3.5 3.5-5.5 6-5.5s5 2 6 5.5" stroke="#0C0E12" stroke-width="2.1" fill="none" stroke-linecap="round"/>
     </svg>
-    <b>realm <em>/</em> radar</b>
+    <b>Red<em>Trak</em></b>
   </a>
 
   <nav aria-label="Primary">
@@ -39,6 +42,30 @@
       <span>Red zone</span>
     </a>
   </nav>
+
+  <div class="user-block" id="user-block">
+    <button class="user-btn" type="button" id="user-toggle" aria-haspopup="true" aria-expanded="false">
+      <span class="user-avatar">
+        <img src="{{ url_for('static', filename='avatars/bl4ckhat.jpg') }}"
+             alt=""
+             onerror="this.style.display='none';this.parentNode.classList.add('no-img');">
+        <svg class="fallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg>
+      </span>
+      <span class="user-name">{{ whoname }}</span>
+      <svg class="user-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="user-menu" id="user-menu" role="menu" hidden>
+      <a role="menuitem" href="{{ url_for('health') }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+        Settings
+      </a>
+      <a role="menuitem" href="{{ url_for('logout') }}" class="kill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/></svg>
+        Terminate session
+      </a>
+    </div>
+  </div>
+
 </aside>
 
 <main class="main">

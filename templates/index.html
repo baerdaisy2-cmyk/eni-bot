@@ -17,10 +17,17 @@
       <p class="sub">Keep an eye on every mention of lemonrealm and prv8sup.</p>
     </div>
     <div class="ov-topbar-right">
-      <button class="ov-chip-btn" type="button" disabled title="Coming soon">
+      {% if sample %}
+      <a class="ov-chip-btn ov-chip-btn-live" href="{{ url_for('index') }}">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        Live data
+      </a>
+      {% else %}
+      <a class="ov-chip-btn" href="{{ url_for('index', sample=1) }}">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
         Sample data
-      </button>
+      </a>
+      {% endif %}
       <button class="ov-chip-btn" type="button" disabled title="Coming soon">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
         Last 30 days

@@ -186,6 +186,14 @@ def is_deleted(body, author):
 
 
 def _ours(author, body):
+    # auto-detect if author is our configured Reddit username
+    try:
+        import config as _cfg
+        _me = getattr(_cfg, 'REDDIT_USERNAME', '') or ''
+        if _me and author and author.lower().lstrip('u/') == _me.lower().lstrip('u/'):
+            return True
+    except Exception:
+        pass
     a = (author or "").lower()
     if a and a in [x.lower() for x in config.OUR_AUTHORS]:
         return True

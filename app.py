@@ -23,6 +23,16 @@ app.secret_key = os.environ.get("ENI_SECRET", "")
 db.init()
 scraper.init()
 
+# ------------------------------------------------------- template context --
+@app.context_processor
+def inject_config():
+    """Expose config + helpers to every template."""
+    import config as _cfg
+    return {
+        "config": _cfg,
+        "REDDIT_USERNAME": getattr(_cfg, "REDDIT_USERNAME", "") or "",
+    }
+
 PERMALINK = re.compile(
     r"reddit\.com/r/(?P<sub>[A-Za-z0-9_]+)/comments/(?P<post>[A-Za-z0-9]+)"
     r"(?:/[^/\s]*)?(?:/(?P<comment>[A-Za-z0-9]+))?", re.I)
@@ -154,13 +164,29 @@ def llm_state():
 @app.route("/")
 def index():
     score.run_scoring()
+    sample = request.args.get("sample") == "1"
+    if sample:
+        overview = {
+            "keyword_comments": 248,
+            "deleted_comments": 32,
+            "top3_comments": 86,
+            "red_zone_count": 3,
+            "red_zone": [
+                {"subreddit": "IPTV", "total": 100, "removed": 68, "rate": 68},
+                {"subreddit": "iptvproviders", "total": 100, "removed": 54, "rate": 54},
+                {"subreddit": "streamingtalk", "total": 100, "removed": 42, "rate": 42},
+            ],
+        }
+    else:
+        overview = redtrak.overview_stats()
     return render_template(
         "index.html", rows=score.ranked(50), stats=db.stats(),
         integrations=integrations(), logs=db.recent_logs(8),
         stale=stale_count(), stale_hours=STALE_AFTER // 3600,
         tracking=scraper.our_tracking(), longterm=scraper.long_term(),
         deleted=scraper.deleted_stats(),
-        overview=redtrak.overview_stats(),
+        overview=overview,
+        sample=sample,
     )
 
 
@@ -225,6 +251,34 @@ def keywords_view():
 
 # ------------------------------------------------------------- deletions --
 
+
+# ------------------------------------------------------------------- admin --
+@app.route("/admin/sweep", methods=["GET", "POST"])
+def admin_sweep():
+    """Re-check the removal status of tracked posts via Arctic Shift."""
+    import arctic_shift, arctic_shift_db
+    con = db.connect()
+    rows = con.execute(
+        "SELECT id FROM as_posts ORDER BY fetched_at DESC LIMIT 100"
+    ).fetchall()
+    con.close()
+
+    updated = 0
+    errors = 0
+    refreshed = []
+    for r in rows:
+        try:
+            post = arctic_shift.fetch_post(r["id"])
+            if post:
+                refreshed.append(post)
+        except Exception:
+            errors += 1
+
+    if refreshed:
+        updated = arctic_shift_db.save_posts(refreshed)
+
+    db.log("INFO", "admin", "sweep refreshed %d posts, %d errors" % (updated, errors))
+    return {"updated": updated, "errors": errors, "checked": len(rows)}
 
 # ---------------------------------------------------------- opportunities --
 _refresh_running = {"value": False}
