@@ -1,132 +1,259 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-<head>{% include "_head.html" %}<title>Dashboard — RedTrak</title></head>
+<head>{% include "_head.html" %}<title>Overview — RedTrak</title></head>
 <body>
 <div class="shell">
 {% set nav = 'dash' %}
-{% set page_title = 'Dashboard' %}
+{% set page_title = 'Overview' %}
 {% set page_slug = 'dashboard' %}
-{% set page_sub = 'live telemetry' %}
+{% set page_sub = 'brand mentions · survival' %}
 {% include "_shell.html" %}
 
-  <div class="view">
-    {% if stale %}
-    <div class="notice warn">
-      <p><b>{{ stale }}</b> target{{ 's' if stale != 1 }} unverified for over {{ stale_hours }}h.
-         Survival data only updates on verification.</p>
-      <a class="btn" href="{{ url_for('watch', stale=1) }}">Verify now</a>
-    </div>
-    {% endif %}
-
-    <section class="panel">
-      <h2>Node status</h2>
-      <div class="nodes">
-        <div class="node active">
-          <div class="hd"><i></i><b>Active</b><s data-count="{{ tracking.total_comments_made - stats.deleted }}">0</s></div>
-          <p>Comments confirmed live on Reddit at last verification.</p>
-        </div>
-        <div class="node compromised">
-          <div class="hd"><i></i><b>Compromised</b><s data-count="{{ stats.deleted }}">0</s></div>
-          <p>Removed by a moderator, a filter, or deleted. Cause inferred, never claimed.</p>
-        </div>
-        <div class="node offline">
-          <div class="hd"><i></i><b>Offline</b><s data-count="{{ deleted.aggressive_subreddits | length }}">0</s></div>
-          <p>Subreddits with measured removal activity. Blacklisted nodes are excluded from ranking.</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="metrics">
-      <div class="metric"><b>Threads</b><i data-count="{{ stats.posts }}">0</i></div>
-      <div class="metric"><b>Comments</b><i data-count="{{ stats.comments }}">0</i></div>
-      <div class="metric cyan"><b>Ours</b><i data-count="{{ tracking.total_comments_made }}">0</i></div>
-      <div class="metric red"><b>Removed</b><i data-count="{{ stats.deleted }}">0</i></div>
-      <div class="metric green"><b>Rank 01</b><i data-count="{{ tracking.rank_1_count }}">0</i></div>
-      <div class="metric"><b>Rank 02-05</b><i data-count="{{ tracking.rank_medium_count }}">0</i></div>
-      <div class="metric"><b>Rank 06+</b><i data-count="{{ tracking.rank_low_count }}">0</i></div>
-      <div class="metric amber"><b>Deletion rate</b><i data-count="{{ (deleted.deletion_rate * 100) | round(0) | int }}" data-suffix="%">0%</i></div>
-    </section>
-
-    <div class="duo">
-      <section class="panel">
-        <h2>Long-term telemetry</h2>
-        <div class="kv">
-          <div><s>Period</s><i>ALL TIME</i></div>
-          <div><s>Uptime days</s><i data-count="{{ longterm.days_running }}">0</i></div>
-          <div><s>Threads tracked</s><i data-count="{{ longterm.total_posts_tracked }}">0</i></div>
-          <div><s>Comments tracked</s><i data-count="{{ longterm.total_comments_tracked }}">0</i></div>
-          <div><s>Intakes run</s><i data-count="{{ longterm.total_scrapes }}">0</i></div>
-          <div><s>Mean rank</s><i class="key">{{ longterm.avg_rank or '—' }}</i></div>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>Threat surface</h2>
-        {% for s in deleted.aggressive_subreddits[:6] %}
-        <div class="meter" style="padding:8px 0;border-bottom:1px solid var(--line)">
-          <span class="mono" style="min-width:124px">r/{{ s.subreddit }}</span>
-          <div class="bar bad"><i style="width:{{ (s.aggression_score * 100) | round(0) | int }}%"></i></div>
-          <b style="color:var(--red)">{{ (s.aggression_score * 100) | round(0) | int }}%</b>
-        </div>
-        {% else %}
-        <p class="hint">No removals recorded. Surface is clean, or nothing has been verified yet.</p>
-        {% endfor %}
-        {% if deleted.aggressive_subreddits %}
-        <div class="row"><a class="btn danger" href="{{ url_for('deletions') }}">Breach report</a></div>
-        {% endif %}
-      </section>
-    </div>
-
-    <section class="panel flush">
-      <h2>Ranked threads</h2>
-      <div class="scroll">
-        <table data-sortable>
-          <thead><tr><th class="no idx">#</th><th>Node</th><th>Author</th><th>Title</th><th class="num">Score</th></tr></thead>
-          <tbody>
-          {% for row in rows %}
-            <tr>
-              <td class="idx">{{ '%02d' % loop.index }}</td>
-              <td class="mono muted">r/{{ row.subreddit }}</td>
-              <td class="faint tiny">u/{{ row.author }}</td>
-              <td>
-                <a href="{{ url_for('post_view', pid=row.id) }}">{{ row.title[:80] }}</a>
-                {% if row.marker_hits %}<span class="tag-pill key">marker</span>{% endif %}
-                {% if row.blacklisted %}<span class="tag-pill bad">blacklisted</span>{% endif %}
-                {% if row.gone %}<span class="tag-pill bad">{{ row.gone }} lost</span>{% endif %}
-                {% if row.ours %}<span class="tag-pill ok">{{ row.ours }} ours</span>{% endif %}
-              </td>
-              <td class="num">{{ row.rank_score | round(0) | int }}</td>
-            </tr>
-          {% else %}
-            <tr><td colspan="5" class="empty">
-              <strong>NO TARGETS</strong>
-              Comment on a thread, then <a href="{{ url_for('watch') }}">register the link under Targets</a>.
-            </td></tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="panel">
-      <h2>Live console</h2>
-      <div class="console">
-        {% for l in logs | reverse %}
-        <div class="ln">
-          <span class="ts">{{ l.ts | ts }}</span>
-          <span class="tag {{ l.level | lower }}">[{{ l.level }}]</span>
-          <span class="msg">{{ l.message }}</span>
-        </div>
-        {% else %}
-        <div class="ln"><span class="msg">no events recorded</span></div>
-        {% endfor %}
-        <div class="ln"><span class="cursor">█</span></div>
-      </div>
-      <div class="row"><a class="btn ghost" href="{{ url_for('logs_view') }}">Full console</a></div>
-    </section>
+<div class="view">
+  <div class="topbar-line">
+    <h1>Reddit overview</h1>
+    <p class="sub">Keep an eye on every mention of lemonrealm and prv8sup.</p>
   </div>
+
+  <div style="margin-bottom:14px">
+    <span class="chip chip-brand">Tracking: <b>lemonrealm</b> · <b>prv8sup</b></span>
+  </div>
+
+  <section class="overview-counters">
+    <div class="ov-card">
+      <div class="ov-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Keyword comments
+      </div>
+      <div class="ov-val">{{ overview.keyword_comments }}</div>
+      <div class="ov-foot">brand mentions matched</div>
+    </div>
+
+    <div class="ov-card">
+      <div class="ov-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg>
+        Deleted comments
+      </div>
+      <div class="ov-val dead">{{ overview.deleted_comments }}</div>
+      <div class="ov-foot">{{ ((overview.deleted_comments / overview.keyword_comments * 100) if overview.keyword_comments else 0) | round(0) | int }}% of mentions</div>
+    </div>
+
+    <div class="ov-card">
+      <div class="ov-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0zM17 5h3a2 2 0 0 1 0 4h-3M7 5H4a2 2 0 0 0 0 4h3"/></svg>
+        Top 3 comments
+      </div>
+      <div class="ov-val live">{{ overview.top3_comments }}</div>
+      <div class="ov-foot">highest-visibility mentions</div>
+    </div>
+
+    <div class="ov-card">
+      <div class="ov-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2l10 18H2zM12 9v5M12 17.5v.5"/></svg>
+        Red-zone subreddits
+      </div>
+      <div class="ov-val warn">{{ overview.red_zone_count }}</div>
+      <div class="ov-foot">high removal activity</div>
+    </div>
+  </section>
+
+  <div class="ov-grid">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Tracked posts</h2>
+        <div class="tabs">
+          <a href="#" class="on">All posts</a>
+          <a href="#">Active</a>
+          <a href="#">Deleted</a>
+        </div>
+      </div>
+      <div class="panel-body">
+        {% if rows %}
+          <div class="post-grid">
+            {% for row in rows[:8] %}
+            <div class="post-card">
+              <div class="pc-top">
+                <span class="pc-sub">r/{{ row.subreddit }}</span>
+                <span class="pc-time">{{ row.first_seen | ts if row.first_seen else '' }}</span>
+                {% if row.gone %}
+                  <span class="badge dead">Deleted</span>
+                {% else %}
+                  <span class="badge live">Active</span>
+                {% endif %}
+              </div>
+              <h3 class="pc-title">
+                <a href="{{ url_for('post_view', pid=row.id) }}">{{ row.title[:90] }}</a>
+              </h3>
+              {% if row.body %}
+              <div class="pc-snippet">{{ row.body[:140] }}{% if row.body|length > 140 %}...{% endif %}</div>
+              {% endif %}
+              <div class="pc-stats">
+                <span>Rank <b>#{{ row.rank_score | round(0) | int if row.rank_score else '—' }}</b></span>
+                <span>{{ row.comments or 0 }} replies</span>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state">
+            <b>No tracked posts yet</b>
+            Comment on a thread, then <a href="{{ url_for('watch') }}">register the link</a>.
+          </div>
+        {% endif %}
+      </div>
+    </section>
+
+    <aside class="ov-side">
+      <section class="panel">
+        <div class="panel-head"><h2>Red zone</h2></div>
+        <div class="panel-body">
+          <p class="panel-sub">Subreddits with high removal rates</p>
+          {% if overview.red_zone %}
+            {% for z in overview.red_zone %}
+            <div class="zone-row">
+              <span class="zone-sub">r/{{ z.subreddit }}</span>
+              <div class="zone-bar"><i style="width:{{ z.rate }}%"></i></div>
+              <b class="zone-pct">{{ z.rate }}%</b>
+            </div>
+            {% endfor %}
+          {% else %}
+            <p class="hint">No red-zone subs yet. Scrape more posts to see removal patterns.</p>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Comment visibility</h2></div>
+        <div class="panel-body">
+          <p class="panel-sub">Where lemonrealm and prv8sup mentions appear</p>
+          <div class="donut">
+            <svg viewBox="0 0 36 36" class="donut-svg">
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--line)" stroke-width="3"/>
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--live)" stroke-width="3"
+                      stroke-dasharray="{{ overview.top3_comments }} {{ 100 - overview.top3_comments }}"
+                      stroke-dashoffset="25"/>
+            </svg>
+            <div class="donut-center">
+              <b>{{ overview.top3_comments }}</b>
+              <span>in top 3</span>
+            </div>
+          </div>
+          <div class="donut-legend">
+            <div><i class="dot live"></i> Top 3 <b>{{ overview.top3_comments }}</b></div>
+            <div><i class="dot warn"></i> Deleted <b>{{ overview.deleted_comments }}</b></div>
+          </div>
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
 </main>
 </div>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
+
+<style>
+.overview-counters {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 22px;
+}
+@media (max-width: 900px) { .overview-counters { grid-template-columns: repeat(2, 1fr); } }
+
+.ov-card {
+  background: var(--panel, #161B22);
+  border: 1px solid var(--line, #232A36);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+.ov-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #8B949E;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+.ov-head svg { width: 16px; height: 16px; stroke: #F97316; }
+.ov-val {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  font-family: var(--mono, monospace);
+  color: #E6EDF3;
+}
+.ov-val.live { color: #22C55E; }
+.ov-val.dead { color: #EF4444; }
+.ov-val.warn { color: #F97316; }
+.ov-foot { margin-top: 6px; font-size: 11px; color: #8B949E; font-family: var(--mono, monospace); }
+
+.ov-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 22px;
+}
+@media (max-width: 1100px) { .ov-grid { grid-template-columns: 1fr; } }
+
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line, #232A36); }
+.panel-head h2 { margin: 0; font-size: 16px; font-weight: 700; }
+.panel-sub { color: #8B949E; font-size: 12px; margin: 0 0 12px; }
+.panel-body { padding: 18px; }
+
+.tabs { display: flex; gap: 4px; }
+.tabs a { padding: 6px 10px; border-radius: 6px; color: #8B949E; font-size: 12px; font-family: var(--mono, monospace); }
+.tabs a.on { background: rgba(249,115,22,.15); color: #F97316; }
+
+.post-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 900px) { .post-grid { grid-template-columns: 1fr; } }
+
+.post-card {
+  background: #1C222C;
+  border: 1px solid var(--line, #232A36);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.pc-top { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #8B949E; font-family: var(--mono, monospace); margin-bottom: 8px; }
+.pc-sub { color: #F97316; font-weight: 600; font-family: var(--sans, sans-serif); }
+.badge { margin-left: auto; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+.badge.live { background: rgba(34,197,94,.12); color: #22C55E; }
+.badge.dead { background: rgba(239,68,68,.12); color: #EF4444; }
+.pc-title { margin: 4px 0 8px; font-size: 14.5px; font-weight: 600; line-height: 1.35; }
+.pc-title a { color: #E6EDF3; }
+.pc-snippet { font-size: 12px; color: #8B949E; line-height: 1.5; margin-bottom: 10px; }
+.pc-stats { display: flex; gap: 16px; font-size: 12px; color: #8B949E; font-family: var(--mono, monospace); }
+.pc-stats b { color: #E6EDF3; }
+
+.ov-side { display: flex; flex-direction: column; gap: 18px; }
+
+.zone-row { display: grid; grid-template-columns: 140px 1fr 50px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line, #232A36); }
+.zone-row:last-child { border-bottom: 0; }
+.zone-sub { font-size: 13px; font-family: var(--mono, monospace); color: #E6EDF3; }
+.zone-bar { height: 4px; background: #232A36; border-radius: 2px; overflow: hidden; }
+.zone-bar i { display: block; height: 100%; background: #EF4444; }
+.zone-pct { color: #EF4444; font-family: var(--mono, monospace); font-size: 12px; text-align: right; }
+
+.donut { position: relative; display: flex; justify-content: center; margin-bottom: 14px; }
+.donut-svg { width: 130px; height: 130px; transform: rotate(-90deg); }
+.donut-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+.donut-center b { display: block; font-size: 24px; font-weight: 700; color: #E6EDF3; font-family: var(--mono, monospace); }
+.donut-center span { font-size: 11px; color: #8B949E; }
+.donut-legend { display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+.donut-legend div { display: flex; align-items: center; gap: 8px; color: #8B949E; }
+.donut-legend b { margin-left: auto; color: #E6EDF3; font-family: var(--mono, monospace); }
+.dot { width: 8px; height: 8px; border-radius: 50%; }
+.dot.live { background: #22C55E; }
+.dot.warn { background: #F97316; }
+
+.empty-state { text-align: center; padding: 40px 20px; color: #8B949E; font-size: 13px; }
+.empty-state b { display: block; font-size: 15px; margin-bottom: 6px; color: #E6EDF3; }
+.empty-state a { color: #F97316; }
+
+.topbar-line { margin-bottom: 12px; }
+.topbar-line h1 { margin: 0 0 4px; font-size: 26px; font-weight: 700; letter-spacing: -.01em; }
+.topbar-line .sub { color: #8B949E; font-size: 13px; margin: 0; }
+.chip-brand { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 20px; background: var(--panel, #161B22); border: 1px solid var(--line, #232A36); font-size: 12px; color: #8B949E; font-family: var(--mono, monospace); }
+.chip-brand b { color: #F97316; }
+.hint { color: #8B949E; font-size: 12px; }
+</style>
 </body>
 </html>

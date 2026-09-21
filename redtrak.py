@@ -297,3 +297,61 @@ def stats(p):
         "not_yet_replied": len(opps),  # we already filtered out replied ones
         "needs_rule_review": review,
     }
+
+
+def overview_stats():
+    """Four counters for the Overview page, backed by real RedTrak data."""
+    con = db.connect()
+    try:
+        kw = con.execute(
+            "SELECT COUNT(*) AS n FROM keyword_hits"
+        ).fetchone()
+        keyword_comments = kw["n"] if kw else 0
+
+        deleted = con.execute(
+            "SELECT COUNT(*) AS n FROM as_posts WHERE removed_by_category IS NOT NULL"
+        ).fetchone()
+        deleted_comments = deleted["n"] if deleted else 0
+
+        top3 = con.execute(
+            "SELECT COUNT(*) AS n FROM our_ranks WHERE rank <= 3"
+        ).fetchone()
+        top3_comments = top3["n"] if top3 else 0
+
+        # red zone subreddits: removal rate >= 40%, at least 3 posts
+        zones = con.execute(
+            """SELECT subreddit,
+                      COUNT(*) AS total,
+                      SUM(CASE WHEN removed_by_category IS NOT NULL THEN 1 ELSE 0 END) AS removed
+               FROM as_posts
+               WHERE subreddit IS NOT NULL
+               GROUP BY subreddit
+               HAVING COUNT(*) >= 3"""
+        ).fetchall()
+
+        red_zone = []
+        for r in zones:
+            total = r["total"] or 0
+            removed = r["removed"] or 0
+            if total:
+                rate = removed / float(total)
+                if rate >= 0.40:
+                    red_zone.append({
+                        "subreddit": r["subreddit"],
+                        "total": total,
+                        "removed": removed,
+                        "rate": round(rate * 100),
+                    })
+        red_zone.sort(key=lambda z: -z["rate"])
+    finally:
+        con.close()
+
+    return {
+        "keyword_comments": keyword_comments,
+        "deleted_comments": deleted_comments,
+        "top3_comments": top3_comments,
+        "red_zone_count": len(red_zone),
+        "red_zone": red_zone[:6],
+    }
+
+

@@ -3,6 +3,7 @@ import json
 import os
 import re
 import time
+import threading
 
 from flask import (Flask, jsonify, redirect, render_template, request,
                    session, url_for)
@@ -159,6 +160,7 @@ def index():
         stale=stale_count(), stale_hours=STALE_AFTER // 3600,
         tracking=scraper.our_tracking(), longterm=scraper.long_term(),
         deleted=scraper.deleted_stats(),
+        overview=redtrak.overview_stats(),
     )
 
 
@@ -225,18 +227,37 @@ def keywords_view():
 
 
 # ---------------------------------------------------------- opportunities --
+_refresh_running = {"value": False}
+
+
+def _run_refresh_in_background():
+    try:
+        redtrak.refresh()
+    except Exception as exc:
+        db.log("ERROR", "redtrak", "background refresh failed: %s" % str(exc)[:200])
+    finally:
+        _refresh_running["value"] = False
+
+
 @app.route("/opportunities", methods=["GET", "POST"])
 def opportunities_view():
+    note = request.args.get("note", "")
     if request.method == "POST" and request.form.get("action") == "refresh":
-        found, msg = redtrak.refresh()
-        return redirect(url_for("opportunities_view", note=msg))
+        if _refresh_running["value"]:
+            note = "already refreshing — check back in a few minutes"
+        else:
+            _refresh_running["value"] = True
+            t = threading.Thread(target=_run_refresh_in_background, daemon=True)
+            t.start()
+            note = "refresh started — results will appear in 3–5 minutes"
+        return redirect(url_for("opportunities_view", note=note))
     p = redtrak.payload()
     return render_template(
         "opportunities.html",
         nav="opportunities",
         payload=p,
         stats=redtrak.stats(p),
-        note=request.args.get("note", ""),
+        note=note,
     )
 
 @app.route("/deletions")
