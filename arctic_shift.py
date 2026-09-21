@@ -15,7 +15,7 @@ MIN_LIMIT = 5
 MAX_LIMIT = 50
 
 _last_call = [0.0]
-_MIN_GAP = 1.5  # seconds between Arctic Shift calls, global
+_MIN_GAP = 3.0  # seconds between Arctic Shift calls, global
 
 
 def search_posts(subreddit=None, q=None, limit=25, after=None, before=None, _retries=3):
