@@ -1,121 +1,191 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-<head>{% include "_head.html" %}<title>Targets — RedTrak</title></head>
+<head>{% include "_head.html" %}<title>Tracked posts — RedTrak</title></head>
 <body>
 <div class="shell">
 {% set nav = 'watch' %}
-{% set page_title = 'Targets' %}
-{% set page_slug = 'targets' %}
-{% set page_sub = 'registered comments · manual verification' %}
+{% set page_title = 'Tracked posts' %}
+{% set page_slug = 'tracked' %}
+{% set page_sub = 'comments you have registered' %}
 {% include "_shell.html" %}
 
-  <div class="view">
-    {% if stale and not only_stale %}
-    <div class="notice warn">
-      <p><b>{{ stale }}</b> target{{ 's' if stale != 1 }} unverified for over
-         {{ (stale_seconds // 3600) }}h. Survival data only moves when you verify.</p>
-      <a class="btn" href="{{ url_for('watch', stale=1) }}">Show only those</a>
-    </div>
-    {% elif only_stale %}
-    <div class="notice">
-      <p>Showing unverified targets only.</p>
-      <a class="btn ghost" href="{{ url_for('watch') }}">Show all</a>
-    </div>
-    {% endif %}
+<div class="view">
+  <div class="topbar-line">
+    <h1>Tracked posts</h1>
+    <p class="sub">Comments you have posted on Reddit, tracked for survival.</p>
+  </div>
 
-    <section class="panel">
-      <h2>Register targets</h2>
+  {% if stale %}
+  <div class="rt-notice warn">
+    <b>{{ stale }}</b> comment{{ 's' if stale != 1 }} unverified for over {{ (stale_seconds // 3600) }}h.
+    <a href="{{ url_for('watch', stale=1) }}">Verify now</a>
+  </div>
+  {% endif %}
+
+  <section class="rt-panel">
+    <div class="rt-panel-head">
+      <h2>Register a comment</h2>
+      <span class="rt-hint">One permalink per line</span>
+    </div>
+    <div class="rt-panel-body">
       <form method="post" action="{{ url_for('watch_add') }}">
-        <div class="field">
-          <label for="urls">Comment permalinks — one per line</label>
-          <textarea name="urls" id="urls" required spellcheck="false"
-                    placeholder="https://reddit.com/r/IPTV/comments/abc123/title/def456/"></textarea>
-        </div>
-        <div class="field">
-          <label for="note">Note (optional)</label>
-          <input name="note" id="note" autocomplete="off"
-                 placeholder="what you said, or the thread topic">
-        </div>
-        <div class="row" style="margin-top:0">
-          <button class="btn primary" type="submit">Register</button>
-          <span class="hint">Post the comment on Reddit yourself, then paste the link.
-            RedTrak never posts.</span>
+        <label class="rt-label">Comment permalinks</label>
+        <textarea class="rt-input rt-textarea" name="links" rows="4"
+                  placeholder="https://reddit.com/r/IPTV/comments/abc123/title/def456/"></textarea>
+
+        <label class="rt-label" style="margin-top:14px">Note (optional)</label>
+        <input class="rt-input" type="text" name="note"
+               placeholder="what you said, or the thread topic">
+
+        <div class="rt-actions">
+          <button class="rt-btn primary" type="submit">Register</button>
+          <span class="rt-hint">Post the comment on Reddit yourself. RedTrak never posts.</span>
         </div>
       </form>
-    </section>
+    </div>
+  </section>
 
-    <section class="panel">
+  <section class="rt-panel">
+    <div class="rt-panel-head">
       <h2>Search vectors</h2>
-      <div class="chips">
-        <a class="chip" target="_blank" rel="noopener"
-           href="https://www.google.com/search?q=site:reddit.com+IPTV+best+service">
-          <b>IPTV best service</b><s>open ↗</s></a>
-        <a class="chip" target="_blank" rel="noopener"
-           href="https://www.google.com/search?q=site:reddit.com+IPTV+recommendation">
-          <b>IPTV recommendation</b><s>open ↗</s></a>
-        <a class="chip" target="_blank" rel="noopener"
-           href="https://www.google.com/search?q=site:reddit.com/r/IPTV&tbs=qdr:w">
-          <b>r/IPTV this week</b><s>open ↗</s></a>
-        <a class="chip" target="_blank" rel="noopener"
-           href="https://www.google.com/search?q=site:reddit.com+which+IPTV+should+i+get">
-          <b>which should I get</b><s>open ↗</s></a>
+      <span class="rt-hint">Google restricted to Reddit — find a thread, comment, then register above.</span>
+    </div>
+    <div class="rt-panel-body">
+      <div class="rt-chips">
+        <a class="rt-chip" target="_blank" rel="noopener"
+           href="https://www.google.com/search?q=site:reddit.com+iptv+best+service">IPTV best service ↗</a>
+        <a class="rt-chip" target="_blank" rel="noopener"
+           href="https://www.google.com/search?q=site:reddit.com+iptv+recommendation">IPTV recommendation ↗</a>
+        <a class="rt-chip" target="_blank" rel="noopener"
+           href="https://www.google.com/search?q=site:reddit.com/r/IPTV+this+week">r/IPTV this week ↗</a>
+        <a class="rt-chip" target="_blank" rel="noopener"
+           href="https://www.google.com/search?q=site:reddit.com+which+iptv+should+I+get">which should I get ↗</a>
       </div>
-      <p class="hint">Google restricted to Reddit. Find a thread, comment, register it above.</p>
-    </section>
+    </div>
+  </section>
 
-    <section class="panel flush">
-      <h2>Registry — {{ rows | length }}</h2>
-      <div class="scroll">
-        <table data-sortable>
-          <thead><tr>
-            <th class="no idx">#</th><th>Node</th><th>Comment</th><th>Operator</th>
-            <th class="num">Last seen</th><th>State</th><th class="no"></th>
-          </tr></thead>
-          <tbody>
-          {% for c in rows %}
-            {% set link = 'https://reddit.com/r/' ~ (c.subreddit or 'all') ~ '/comments/' ~ c.post_id ~ '/_/' ~ c.id ~ '/' %}
-            <tr>
-              <td class="idx">{{ '%02d' % loop.index }}</td>
-              <td class="mono muted">r/{{ c.subreddit or '?' }}</td>
-              <td>
-                <a href="{{ link }}" target="_blank" rel="noopener">{{ (c.body or 'no preview')[:64] }}</a>
-                {% if c.mentions_marker %}<span class="tag-pill key">marker</span>{% endif %}
-              </td>
-              <td class="mono faint tiny">{{ c.owner or '—' }}</td>
-              <td class="num faint">{{ c.last_seen | ago }}</td>
-              <td>
-                {% if c.deleted %}<span class="tag-pill bad">compromised</span>
-                {% elif c.last_seen and (now - c.last_seen) > stale_seconds %}
-                  <span class="tag-pill warn">unverified</span>
-                {% else %}<span class="tag-pill ok">active</span>{% endif %}
-              </td>
-              <td>
-                <div class="acts">
-                  <form method="post" action="{{ url_for('watch_verdict', cid=c.id, verdict='alive') }}">
-                    <button class="mini up" type="submit">Up</button>
-                  </form>
-                  <form method="post" action="{{ url_for('watch_verdict', cid=c.id, verdict='gone') }}">
-                    <button class="mini down" type="submit">Gone</button>
-                  </form>
-                  <form method="post" action="{{ url_for('watch_drop', cid=c.id) }}">
-                    <button class="mini" type="submit">Drop</button>
-                  </form>
-                </div>
-              </td>
-            </tr>
-          {% else %}
-            <tr><td colspan="7" class="empty">
-              <strong>REGISTRY EMPTY</strong>
-              Nothing tracked. Paste your first comment link above.
-            </td></tr>
+  <section class="rt-panel">
+    <div class="rt-panel-head">
+      <h2>Registry</h2>
+      <span class="rt-hint">{{ rows | length }} registered</span>
+    </div>
+    <div class="rt-panel-body rt-flush">
+      {% if rows %}
+      <table class="rt-table">
+        <thead>
+          <tr>
+            <th style="width:36px">#</th>
+            <th>Node</th>
+            <th>Comment</th>
+            <th>Operator</th>
+            <th>Last seen</th>
+            <th>State</th>
+            <th style="width:180px;text-align:right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td class="rt-idx">{{ '%02d' % loop.index }}</td>
+            <td class="rt-mono">r/{{ r.subreddit or '?' }}</td>
+            <td>
+              {% if r.thread_url %}
+                <a href="{{ r.thread_url }}" target="_blank" rel="noopener">{{ (r.title or 'thread')[:60] }}</a>
+              {% else %}
+                <span class="rt-faint">{{ (r.body or '')[:60] }}</span>
+              {% endif %}
+            </td>
+            <td class="rt-faint">{{ r.owner or me or '—' }}</td>
+            <td class="rt-faint">{{ r.last_seen | ts if r.last_seen else '—' }}</td>
+            <td>
+              {% if r.deleted %}
+                <span class="rt-pill bad">GONE</span>
+              {% else %}
+                <span class="rt-pill ok">ACTIVE</span>
+              {% endif %}
+            </td>
+            <td class="rt-rowactions">
+              <form method="post" action="{{ url_for('watch_verdict', cid=r.id, verdict='up') }}" style="display:inline">
+                <button class="rt-mini ok" type="submit">UP</button>
+              </form>
+              <form method="post" action="{{ url_for('watch_verdict', cid=r.id, verdict='gone') }}" style="display:inline">
+                <button class="rt-mini bad" type="submit">GONE</button>
+              </form>
+              <form method="post" action="{{ url_for('watch_drop', cid=r.id) }}" style="display:inline">
+                <button class="rt-mini" type="submit">DROP</button>
+              </form>
+            </td>
+          </tr>
           {% endfor %}
-          </tbody>
-        </table>
+        </tbody>
+      </table>
+      {% else %}
+      <div class="rt-empty">
+        <b>No tracked posts yet</b>
+        Paste a comment permalink above and click Register.
       </div>
-    </section>
-  </div>
+      {% endif %}
+    </div>
+  </section>
+</div>
 </main>
 </div>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
+
+<style>
+.topbar-line { margin-bottom: 12px; }
+.topbar-line h1 { margin: 0 0 4px; font-size: 26px; font-weight: 700; letter-spacing: -.01em; color: #E6EDF3; }
+.topbar-line .sub { color: #8B949E; font-size: 13px; margin: 0; }
+
+.rt-notice { padding: 10px 14px; border-radius: 8px; border: 1px solid #232A36; font-size: 13px; margin-bottom: 16px; color: #E6EDF3; }
+.rt-notice.warn { background: rgba(251,191,36,.08); border-color: rgba(251,191,36,.3); }
+.rt-notice a { color: #F97316; margin-left: 8px; }
+
+.rt-panel { background: #161B22; border: 1px solid #232A36; border-radius: 12px; margin-bottom: 18px; overflow: hidden; }
+.rt-panel-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #232A36; }
+.rt-panel-head h2 { margin: 0; font-size: 16px; font-weight: 700; color: #E6EDF3; }
+.rt-panel-body { padding: 18px; }
+.rt-panel-body.rt-flush { padding: 0; }
+.rt-hint { color: #8B949E; font-size: 12px; font-family: ui-monospace, "JetBrains Mono", monospace; }
+
+.rt-label { display: block; font-size: 12px; color: #8B949E; margin-bottom: 6px; font-family: ui-monospace, monospace; text-transform: uppercase; letter-spacing: .1em; }
+.rt-input { width: 100%; padding: 10px 12px; border-radius: 8px; background: #0B0F19; border: 1px solid #232A36; color: #E6EDF3; font: inherit; font-size: 13px; }
+.rt-input:focus { outline: none; border-color: #F97316; }
+.rt-textarea { resize: vertical; min-height: 80px; font-family: ui-monospace, monospace; font-size: 12.5px; }
+
+.rt-actions { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.rt-btn { padding: 9px 16px; border-radius: 8px; border: 1px solid #232A36; background: #1C222C; color: #E6EDF3; font: inherit; font-size: 13px; cursor: pointer; }
+.rt-btn.primary { background: #F97316; border-color: #F97316; color: #0B0F19; font-weight: 600; }
+.rt-btn.primary:hover { background: #FB923C; border-color: #FB923C; }
+
+.rt-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.rt-chip { padding: 7px 12px; border-radius: 20px; background: rgba(249,115,22,.10); color: #FB923C; font-size: 12px; font-family: ui-monospace, monospace; text-decoration: none; border: 1px solid rgba(249,115,22,.2); }
+.rt-chip:hover { background: rgba(249,115,22,.18); }
+
+.rt-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rt-table th { text-align: left; padding: 11px 18px; color: #8B949E; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; border-bottom: 1px solid #232A36; }
+.rt-table td { padding: 12px 18px; border-bottom: 1px solid #232A36; color: #E6EDF3; }
+.rt-table tr:last-child td { border-bottom: 0; }
+.rt-table tr:hover td { background: #1C222C; }
+.rt-table a { color: #E6EDF3; text-decoration: none; }
+.rt-table a:hover { color: #F97316; }
+
+.rt-idx { font-family: ui-monospace, monospace; color: #8B949E; font-size: 12px; }
+.rt-mono { font-family: ui-monospace, monospace; color: #F97316; }
+.rt-faint { color: #8B949E; font-size: 12px; }
+.rt-rowactions { text-align: right; }
+
+.rt-mini { padding: 5px 10px; border-radius: 6px; font-size: 11px; font-family: ui-monospace, monospace; font-weight: 600; border: 1px solid #232A36; background: #161B22; color: #8B949E; cursor: pointer; margin-left: 4px; }
+.rt-mini:hover { color: #E6EDF3; border-color: #30363D; }
+.rt-mini.ok { color: #22C55E; border-color: rgba(34,197,94,.3); }
+.rt-mini.bad { color: #EF4444; border-color: rgba(239,68,68,.3); }
+
+.rt-pill { padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; font-family: ui-monospace, monospace; }
+.rt-pill.ok { background: rgba(34,197,94,.12); color: #22C55E; }
+.rt-pill.bad { background: rgba(239,68,68,.12); color: #EF4444; }
+
+.rt-empty { text-align: center; padding: 40px 20px; color: #8B949E; font-size: 13px; }
+.rt-empty b { display: block; font-size: 15px; color: #E6EDF3; margin-bottom: 6px; }
+</style>
 </body>
 </html>
