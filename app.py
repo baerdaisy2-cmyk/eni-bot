@@ -186,6 +186,7 @@ def index():
         tracking=scraper.our_tracking(), longterm=scraper.long_term(),
         deleted=scraper.deleted_stats(),
         overview=overview,
+        home=redtrak.home_panels(),
         sample=sample,
     )
 

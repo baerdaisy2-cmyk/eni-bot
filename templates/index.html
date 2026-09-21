@@ -81,7 +81,64 @@
   </section>
 
   <div class="ov-grid">
-    <section class="rt-panel">
+    
+  <section class="home-panels">
+    <div class="hp-col">
+      <div class="rt-panel-head"><h2>Best matches</h2><span class="rt-hint">brand keywords</span></div>
+      <div class="rt-panel-body rt-flush">
+        {% if home.best %}
+        <ul class="hp-list">
+          {% for p in home.best %}
+          <li class="hp-item">
+            <div class="hp-top"><span class="hp-sub">r/{{ p.subreddit }}</span><span class="hp-age">{{ p.age_hours }}h</span></div>
+            <div class="hp-title">{{ p.title[:80] }}</div>
+            <div class="hp-meta"><b>{{ p.score or 0 }}</b> up · <b>{{ p.num_comments or 0 }}</b> comments</div>
+            <a class="hp-link" href="https://reddit.com{{ p.permalink }}" target="_blank" rel="noopener">View post ↗</a>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}<p class="rt-hint" style="padding:16px">No brand matches yet — sweep or scrape a thread.</p>{% endif %}
+      </div>
+    </div>
+
+    <div class="hp-col">
+      <div class="rt-panel-head"><h2>Newest posts</h2><span class="rt-hint">last 30 days</span></div>
+      <div class="rt-panel-body rt-flush">
+        {% if home.newest %}
+        <ul class="hp-list">
+          {% for p in home.newest %}
+          <li class="hp-item">
+            <div class="hp-top"><span class="hp-sub">r/{{ p.subreddit }}</span><span class="hp-age">{{ p.age_hours }}h</span></div>
+            <div class="hp-title">{{ p.title[:80] }}</div>
+            <div class="hp-meta"><b>{{ p.score or 0 }}</b> up · <b>{{ p.num_comments or 0 }}</b> comments</div>
+            <a class="hp-link" href="https://reddit.com{{ p.permalink }}" target="_blank" rel="noopener">View post ↗</a>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}<p class="rt-hint" style="padding:16px">Nothing recent yet.</p>{% endif %}
+      </div>
+    </div>
+
+    <div class="hp-col">
+      <div class="rt-panel-head"><h2>Unanswered</h2><span class="rt-hint">0–1 replies</span></div>
+      <div class="rt-panel-body rt-flush">
+        {% if home.unanswered %}
+        <ul class="hp-list">
+          {% for p in home.unanswered %}
+          <li class="hp-item">
+            <div class="hp-top"><span class="hp-sub">r/{{ p.subreddit }}</span><span class="hp-age">{{ p.age_hours }}h</span></div>
+            <div class="hp-title">{{ p.title[:80] }}</div>
+            <div class="hp-meta"><b>{{ p.score or 0 }}</b> up · <b>{{ p.num_comments or 0 }}</b> comments</div>
+            <a class="hp-link" href="https://reddit.com{{ p.permalink }}" target="_blank" rel="noopener">View post ↗</a>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}<p class="rt-hint" style="padding:16px">Every recent thread has replies.</p>{% endif %}
+      </div>
+    </div>
+  </section>
+
+<section class="rt-panel">
       <div class="rt-panel-head">
         <h2>Tracked posts</h2>
         <div class="rt-tabs">

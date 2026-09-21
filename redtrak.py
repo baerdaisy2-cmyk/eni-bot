@@ -299,6 +299,94 @@ def stats(p):
     }
 
 
+
+def home_panels(limit=6):
+    """Three lists for the Overview page: best matches, newest, unanswered."""
+    con = db.connect()
+    try:
+        # 1. best matches — title or selftext contains one of our watch terms
+        words = _terms() or ["lemonrealm", "prv8sup", "iptv"]
+        # only brand-ish terms first
+        brand_terms = [w for w in words if w in ("lemonrealm", "prv8sup")] or words[:2]
+        like_clauses = " OR ".join(
+            ["LOWER(COALESCE(title,'')) LIKE ? OR LOWER(COALESCE(selftext,'')) LIKE ?"
+             for _ in brand_terms]
+        )
+        like_args = []
+        for w in brand_terms:
+            pat = f"%{w.lower()}%"
+            like_args += [pat, pat]
+
+        best = con.execute(
+            f"""SELECT id, subreddit, title, author, score, num_comments, created_utc, permalink
+                FROM as_posts
+                WHERE ({like_clauses})
+                ORDER BY created_utc DESC
+                LIMIT ?""",
+            tuple(like_args) + (limit,)
+        ).fetchall()
+
+        # 2. newest — last 7 days, from any watched sub
+        subs = _subs()
+        week_ago = int(time.time()) - 30 * 86400
+        if subs:
+            placeholders = ",".join("?" * len(subs))
+            newest = con.execute(
+                f"""SELECT id, subreddit, title, author, score, num_comments, created_utc, permalink
+                    FROM as_posts
+                    WHERE subreddit IN ({placeholders}) AND created_utc >= ?
+                    ORDER BY created_utc DESC
+                    LIMIT ?""",
+                tuple(subs) + (week_ago, limit)
+            ).fetchall()
+        else:
+            newest = con.execute(
+                """SELECT id, subreddit, title, author, score, num_comments, created_utc, permalink
+                   FROM as_posts WHERE created_utc >= ?
+                   ORDER BY created_utc DESC LIMIT ?""",
+                (week_ago, limit)
+            ).fetchall()
+
+        # 3. unanswered — 0 or 1 comments, last 7 days
+        if subs:
+            placeholders = ",".join("?" * len(subs))
+            unanswered = con.execute(
+                f"""SELECT id, subreddit, title, author, score, num_comments, created_utc, permalink
+                    FROM as_posts
+                    WHERE subreddit IN ({placeholders})
+                      AND created_utc >= ?
+                      AND COALESCE(num_comments, 0) <= 1
+                    ORDER BY created_utc DESC
+                    LIMIT ?""",
+                tuple(subs) + (week_ago, limit)
+            ).fetchall()
+        else:
+            unanswered = con.execute(
+                """SELECT id, subreddit, title, author, score, num_comments, created_utc, permalink
+                   FROM as_posts WHERE created_utc >= ?
+                     AND COALESCE(num_comments, 0) <= 1
+                   ORDER BY created_utc DESC LIMIT ?""",
+                (week_ago, limit)
+            ).fetchall()
+    finally:
+        con.close()
+
+    def _row(r):
+        d = dict(r) if hasattr(r, "keys") else r
+        if "created_utc" in d and d["created_utc"]:
+            d["age_hours"] = max(0, int((time.time() - d["created_utc"]) / 3600))
+        else:
+            d["age_hours"] = 0
+        return d
+
+    return {
+        "best": [_row(r) for r in best],
+        "newest": [_row(r) for r in newest],
+        "unanswered": [_row(r) for r in unanswered],
+    }
+
+
+
 def overview_stats():
     """Four counters for the Overview page, backed by real RedTrak data."""
     con = db.connect()
