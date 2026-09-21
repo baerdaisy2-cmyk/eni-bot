@@ -1,97 +1,165 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-<head>{% include "_head.html" %}<title>Signals — RedTrak</title></head>
+<head>{% include "_head.html" %}<title>Keywords — RedTrak</title></head>
 <body>
 <div class="shell">
 {% set nav = 'keywords' %}
-{% set page_title = 'Signals' %}
-{% set page_slug = 'signals' %}
-{% set page_sub = 'watch terms · matches' %}
-{% set off = status.base == 'disabled' %}
+{% set page_title = 'Keywords' %}
+{% set page_slug = 'keywords' %}
+{% set page_sub = 'watch terms · live matches' %}
 {% include "_shell.html" %}
 
-  <div class="view">
-    {% if off %}
-    <div class="notice warn">
-      <p><b>Sweeps on standby.</b> No source attached. Terms are stored and matched
-         the moment a feed comes online.</p>
-    </div>
-    {% elif not status.ok %}
-    <div class="notice bad"><p>Source unreachable at <b>{{ status.base }}</b>. Sweeps require it.</p></div>
-    {% endif %}
-    {% if note %}<div class="notice"><p>{{ note }}</p></div>{% endif %}
+<div class="view">
+  <div class="topbar-line">
+    <h1>Keywords</h1>
+    <p class="sub">Watch terms RedTrak scans for across every scraped thread and sweep.</p>
+  </div>
 
-    <section class="panel">
-      <h2>Watching {{ words | length }} / {{ maximum }}</h2>
-      <div class="chips">
+  {% if note %}<div class="rt-notice ok">{{ note }}</div>{% endif %}
+
+  <section class="rt-panel">
+    <div class="rt-panel-head">
+      <h2>Watching {{ words | length }} of {{ maximum }}</h2>
+      <span class="rt-hint">case-insensitive · matched as soon as a source is live</span>
+    </div>
+    <div class="rt-panel-body">
+      {% if words %}
+      <div class="kw-chips">
         {% for k in words %}
-        <span class="chip {{ 'hot' if k.matches }}">
-          <b>{{ k.word }}</b><s>{{ k.matches or 0 }} hit{{ '' if k.matches == 1 else 's' }}</s>
+        <div class="kw-chip {% if k.matches %}hot{% endif %}">
+          <div class="kw-top">
+            <b>{{ k.word }}</b>
+            <s>{{ k.matches or 0 }} hit{{ '' if (k.matches or 0) == 1 else 's' }}</s>
+          </div>
           <form method="post" style="display:inline">
             <input type="hidden" name="action" value="remove">
             <input type="hidden" name="word" value="{{ k.word }}">
-            <button type="submit" aria-label="Remove {{ k.word }}">&times;</button>
+            <button class="kw-x" type="submit" aria-label="Stop watching {{ k.word }}">×</button>
           </form>
-        </span>
-        {% else %}
-        <span class="hint">No terms yet. Add brand names and markers below.</span>
+        </div>
         {% endfor %}
       </div>
+      {% else %}
+      <p class="rt-hint">Nothing watched yet. Add a brand name or marker below.</p>
+      {% endif %}
+    </div>
+  </section>
 
-      {% if words | length < maximum %}
+  {% if words | length < maximum %}
+  <section class="rt-panel">
+    <div class="rt-panel-head"><h2>Add a keyword</h2></div>
+    <div class="rt-panel-body">
       <form method="post">
         <input type="hidden" name="action" value="add">
-        <div class="field">
-          <label for="word">New term</label>
-          <input name="word" id="word" required maxlength="60" autocomplete="off"
-                 spellcheck="false" placeholder="lemonrealm">
-        </div>
-        <div class="row" style="margin-top:0">
-          <button class="btn primary" type="submit">Add term</button>
-          <span class="hint">Case-insensitive. Stored now, matched when a feed exists.</span>
+        <label class="rt-label">New keyword</label>
+        <input class="rt-input" name="word" required maxlength="60" autocomplete="off"
+               placeholder="lemonrealm">
+        <div class="rt-actions">
+          <button class="rt-btn primary" type="submit">Add keyword</button>
+          <span class="rt-hint">Case-insensitive. Stored now, matched as soon as a source is live.</span>
         </div>
       </form>
+    </div>
+  </section>
+  {% else %}
+  <section class="rt-panel">
+    <div class="rt-panel-body">
+      <p class="rt-hint">Limit reached. Remove one to add another.</p>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="rt-panel">
+    <div class="rt-panel-head">
+      <h2>Recent matches</h2>
+      <span class="rt-hint">{{ hits | length }} shown</span>
+    </div>
+    <div class="rt-panel-body rt-flush">
+      {% if hits %}
+      <table class="rt-table">
+        <thead>
+          <tr>
+            <th style="width:140px">Keyword</th>
+            <th style="width:180px">Subreddit</th>
+            <th>Body</th>
+            <th style="width:120px">Author</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for h in hits %}
+          <tr>
+            <td class="rt-mono" style="color:#FB923C">{{ h.word }}</td>
+            <td class="rt-mono">r/{{ h.subreddit or '?' }}</td>
+            <td class="rt-faint">{{ (h.body or '')[:140] }}{% if h.body and h.body|length > 140 %}...{% endif %}</td>
+            <td class="rt-faint">u/{{ h.author or '?' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
       {% else %}
-      <p class="hint">Limit reached. Remove one to add another.</p>
-      {% endif %}
-    </section>
-
-    {% if not off %}
-    <section class="panel">
-      <h2>Sweep</h2>
-      <form method="post">
-        <input type="hidden" name="action" value="sweep">
-        <div class="row" style="margin-top:0">
-          <button class="btn primary" type="submit">Run sweep</button>
-          <span class="hint">Queries every watched term. Duplicates never double-count.</span>
-        </div>
-      </form>
-    </section>
-    {% endif %}
-
-    <section class="panel">
-      <h2>Matches — {{ hits | length }}</h2>
-      {% for h in hits %}
-      <div class="item">
-        <div class="body">
-          <div class="meta">
-            <b style="color:var(--cyan)">{{ h.word }}</b>
-            <span>r/{{ h.subreddit or '?' }}</span><span>u/{{ h.author or '?' }}</span>
-            <span>{{ h.found_at | ts }}</span>
-            {% if h.post_id %}<a class="mono" target="_blank" rel="noopener"
-              href="https://reddit.com/comments/{{ h.post_id }}">open ↗</a>{% endif %}
-          </div>
-          <div class="txt">{{ h.body }}</div>
-        </div>
+      <div class="rt-empty">
+        <b>No matches yet</b>
+        Add a keyword above, then run a sweep from the Opportunities page or scrape a thread.
       </div>
-      {% else %}
-      <p class="empty"><strong>NO SIGNAL</strong>
-        {% if off %}Terms stored, waiting on a feed.{% else %}Add a term, then sweep.{% endif %}</p>
-      {% endfor %}
-    </section>
-  </div>
+      {% endif %}
+    </div>
+  </section>
+</div>
 </main>
 </div>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
+
+<style>
+.topbar-line { margin-bottom: 12px; }
+.topbar-line h1 { margin: 0 0 4px; font-size: 26px; font-weight: 700; letter-spacing: -.01em; color: #E6EDF3; }
+.topbar-line .sub { color: #8B949E; font-size: 13px; margin: 0; }
+
+.rt-notice { padding: 10px 14px; border-radius: 8px; border: 1px solid #232A36; font-size: 13px; margin-bottom: 16px; color: #E6EDF3; }
+.rt-notice.ok { background: rgba(34,197,94,.08); border-color: rgba(34,197,94,.3); color: #22C55E; }
+
+.rt-panel { background: #161B22; border: 1px solid #232A36; border-radius: 12px; margin-bottom: 18px; overflow: hidden; }
+.rt-panel-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #232A36; }
+.rt-panel-head h2 { margin: 0; font-size: 16px; font-weight: 700; color: #E6EDF3; }
+.rt-panel-body { padding: 18px; }
+.rt-panel-body.rt-flush { padding: 0; }
+.rt-hint { color: #8B949E; font-size: 12px; font-family: ui-monospace, "JetBrains Mono", monospace; }
+
+.rt-label { display: block; font-size: 12px; color: #8B949E; margin-bottom: 6px; font-family: ui-monospace, monospace; text-transform: uppercase; letter-spacing: .1em; }
+.rt-input { width: 100%; padding: 10px 12px; border-radius: 8px; background: #0B0F19; border: 1px solid #232A36; color: #E6EDF3; font: inherit; font-size: 13px; }
+.rt-input:focus { outline: none; border-color: #F97316; }
+.rt-actions { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.rt-btn { padding: 9px 16px; border-radius: 8px; border: 1px solid #232A36; background: #1C222C; color: #E6EDF3; font: inherit; font-size: 13px; cursor: pointer; }
+.rt-btn.primary { background: #F97316; border-color: #F97316; color: #0B0F19; font-weight: 600; }
+.rt-btn.primary:hover { background: #FB923C; border-color: #FB923C; }
+
+.kw-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.kw-chip {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: 20px;
+  background: #0B0F19; border: 1px solid #232A36;
+  font-family: ui-monospace, monospace; font-size: 12.5px;
+}
+.kw-chip.hot { border-color: rgba(249,115,22,.4); background: rgba(249,115,22,.08); }
+.kw-top { display: flex; align-items: center; gap: 8px; }
+.kw-chip b { color: #E6EDF3; font-weight: 600; }
+.kw-chip s { color: #8B949E; text-decoration: none; font-size: 11px; }
+.kw-chip.hot s { color: #FB923C; }
+.kw-x {
+  border: 0; background: transparent; color: #8B949E; cursor: pointer;
+  font-size: 16px; line-height: 1; padding: 0 2px;
+}
+.kw-x:hover { color: #EF4444; }
+
+.rt-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rt-table th { text-align: left; padding: 11px 18px; color: #8B949E; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; border-bottom: 1px solid #232A36; }
+.rt-table td { padding: 12px 18px; border-bottom: 1px solid #232A36; color: #E6EDF3; }
+.rt-table tr:last-child td { border-bottom: 0; }
+.rt-table tr:hover td { background: #1C222C; }
+.rt-mono { font-family: ui-monospace, monospace; color: #F97316; }
+.rt-faint { color: #8B949E; font-size: 12px; }
+
+.rt-empty { text-align: center; padding: 40px 20px; color: #8B949E; font-size: 13px; }
+.rt-empty b { display: block; font-size: 15px; color: #E6EDF3; margin-bottom: 6px; }
+</style>
 </body>
 </html>
