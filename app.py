@@ -15,6 +15,7 @@ import monitor
 import reddit
 import score
 import scraper
+import redtrak
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("ENI_SECRET", "")
@@ -221,6 +222,23 @@ def keywords_view():
 
 
 # ------------------------------------------------------------- deletions --
+
+
+# ---------------------------------------------------------- opportunities --
+@app.route("/opportunities", methods=["GET", "POST"])
+def opportunities_view():
+    if request.method == "POST" and request.form.get("action") == "refresh":
+        found, msg = redtrak.refresh()
+        return redirect(url_for("opportunities_view", note=msg))
+    p = redtrak.payload()
+    return render_template(
+        "opportunities.html",
+        nav="opportunities",
+        payload=p,
+        stats=redtrak.stats(p),
+        note=request.args.get("note", ""),
+    )
+
 @app.route("/deletions")
 def deletions():
     stats = scraper.deleted_stats()
@@ -569,3 +587,21 @@ if __name__ == "__main__":
            {"backend": db.backend(), "users": len(users()),
             "scraper": scraper.SCRAPER_BASE})
     app.run(host="127.0.0.1", port=int(os.environ.get("PORT", "5001")))
+
+
+# ---------------------------------------------------------- opportunities --
+@app.route("/opportunities", methods=["GET", "POST"])
+def opportunities_view():
+    if request.method == "POST" and request.form.get("action") == "refresh":
+        found, msg = redtrak.refresh()
+        return redirect(url_for("opportunities_view", note=msg))
+    p = redtrak.payload()
+    return render_template(
+        "opportunities.html",
+        nav="opportunities",
+        payload=p,
+        stats=redtrak.stats(p),
+        note=request.args.get("note", ""),
+    )
+
+

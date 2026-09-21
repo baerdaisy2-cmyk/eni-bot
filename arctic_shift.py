@@ -58,10 +58,12 @@ def search_posts(subreddit=None, q=None, limit=25, after=None, before=None, _ret
             last_exc = exc
             code = exc.response.status_code if exc.response is not None else 0
             # 422 is Arctic Shift's soft rate-limit signal
-            if code in (422, 429, 500, 502, 503, 504) and attempt < _retries:
-                backoff = 2 ** attempt + (2 if code == 422 else 0)
-                time.sleep(backoff)
+            if code in (429, 500, 502, 503, 504) and attempt < _retries:
+                time.sleep(2 ** attempt)
                 continue
+            if code == 422:
+                # Arctic Shift uses 422 for "no results for this query"
+                return []
             raise
         except requests.RequestException as exc:
             last_exc = exc
