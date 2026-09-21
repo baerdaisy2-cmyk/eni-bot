@@ -590,18 +590,5 @@ if __name__ == "__main__":
 
 
 # ---------------------------------------------------------- opportunities --
-@app.route("/opportunities", methods=["GET", "POST"])
-def opportunities_view():
-    if request.method == "POST" and request.form.get("action") == "refresh":
-        found, msg = redtrak.refresh()
-        return redirect(url_for("opportunities_view", note=msg))
-    p = redtrak.payload()
-    return render_template(
-        "opportunities.html",
-        nav="opportunities",
-        payload=p,
-        stats=redtrak.stats(p),
-        note=request.args.get("note", ""),
-    )
 
 
