@@ -513,36 +513,96 @@ def deleted_stats():
 
 
 def top_performers():
-    """Everyone who has added comments through this app, ranked by volume."""
+    """Everyone who has added comments through this app, ranked by volume.
+
+    Returns per-user: username, avatar, account_age_days, comments_made,
+    live_count, gone_count, survival_rate,
+    mentions_lemonrealm, mentions_prv8sup, mentions_total,
+    rank_1, rank_2, rank_3, rank_other."""
     con = db.connect()
-    rows = con.execute(
-        """SELECT owner AS username, COUNT(*) AS made,
-                  SUM(CASE WHEN deleted=1 THEN 1 ELSE 0 END) AS gone
-           FROM comments WHERE is_ours=1 AND owner != ''
-           GROUP BY owner ORDER BY COUNT(*) DESC""").fetchall()
-    ranks = con.execute(
-        "SELECT comment_id, rank FROM our_ranks").fetchall()
-    con.close()
-    hits = sum(1 for r in ranks if (r["rank"] or 99) == 1)
+    try:
+        base = con.execute(
+            """SELECT owner AS username,
+                      COUNT(*) AS made,
+                      SUM(CASE WHEN deleted=1 THEN 1 ELSE 0 END) AS gone
+               FROM comments
+               WHERE is_ours=1 AND owner != ''
+               GROUP BY owner
+               ORDER BY COUNT(*) DESC"""
+        ).fetchall()
+
+        # per-user rank breakdown
+        rank_rows = con.execute(
+            """SELECT c.owner AS username, r.rank AS rank, COUNT(*) AS n
+               FROM our_ranks r
+               JOIN comments c ON c.id = r.comment_id
+               WHERE c.is_ours = 1 AND c.owner != ''
+               GROUP BY c.owner, r.rank"""
+        ).fetchall()
+
+        # per-user brand mentions from keyword_hits
+        mention_rows = con.execute(
+            """SELECT author AS username, word, COUNT(*) AS n
+               FROM keyword_hits
+               WHERE author IS NOT NULL AND author != ''
+               GROUP BY author, word"""
+        ).fetchall()
+
+        cache = {}
+        for r in con.execute("SELECT * FROM user_cache").fetchall():
+            cache[r["username"]] = r
+    finally:
+        con.close()
+
+    ranks_by_user = {}
+    for r in rank_rows:
+        ranks_by_user.setdefault(r["username"], {})[r["rank"]] = r["n"]
+
+    mentions_by_user = {}
+    for r in mention_rows:
+        mentions_by_user.setdefault(r["username"], {})[r["word"]] = r["n"]
 
     out = []
-    for r in rows:
+    for r in base:
         name = r["username"]
-        cached = None
-        con = db.connect()
-        cached = con.execute("SELECT * FROM user_cache WHERE username=?", (name,)).fetchone()
-        con.close()
         made = r["made"] or 0
         gone = r["gone"] or 0
+        live = made - gone
+        survival = round((live / float(made)) * 100) if made else 0
+
+        ranks = ranks_by_user.get(name, {})
+        r1 = ranks.get(1, 0)
+        r2 = ranks.get(2, 0)
+        r3 = ranks.get(3, 0)
+        r_other = sum(v for k, v in ranks.items() if k > 3)
+
+        mentions = mentions_by_user.get(name, {})
+        m_lem = mentions.get("lemonrealm", 0)
+        m_prv = mentions.get("prv8sup", 0)
+        m_total = sum(mentions.values())
+
+        c = cache.get(name, {})
+
         out.append({
             "username": name,
-            "avatar": (cached["avatar"] if cached else None) or fallback_avatar(name),
+            "avatar": c.get("avatar") or fallback_avatar(name),
+            "account_age_days": c.get("account_age_days"),
             "comments_made": made,
-            "rank_1_hits": hits if len(rows) == 1 else 0,
-            "survival_rate": round((made - gone) / float(made) * 100) if made else 0,
-            "account_age_days": cached["account_age_days"] if cached else None,
+            "live_count": live,
+            "gone_count": gone,
+            "survival_rate": survival,
+            "mentions_lemonrealm": m_lem,
+            "mentions_prv8sup": m_prv,
+            "mentions_total": m_total,
+            "rank_1": r1,
+            "rank_2": r2,
+            "rank_3": r3,
+            "rank_other": r_other,
+            "rank_1_hits": r1,
         })
+
     return out
+
 
 
 def long_term():

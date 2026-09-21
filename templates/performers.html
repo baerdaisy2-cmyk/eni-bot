@@ -1,76 +1,250 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-<head>{% include "_head.html" %}<title>Operators — RedTrak</title></head>
+<head>{% include "_head.html" %}<title>Top commenters — RedTrak</title></head>
 <body>
 <div class="shell">
 {% set nav = 'performers' %}
-{% set page_title = 'Operators' %}
-{% set page_slug = 'operators' %}
-{% set page_sub = 'per-account performance' %}
+{% set page_title = 'Top commenters' %}
+{% set page_slug = 'commenters' %}
+{% set page_sub = 'who is getting seen' %}
 {% include "_shell.html" %}
 
-  <div class="view">
-    <section class="metrics">
-      <div class="metric cyan"><b>Comments made</b><i data-count="{{ tracking.total_comments_made }}">0</i></div>
-      <div class="metric green"><b>Rank 01 hits</b><i data-count="{{ tracking.rank_1_count }}">0</i></div>
-      <div class="metric"><b>Rank 02-05</b><i data-count="{{ tracking.rank_medium_count }}">0</i></div>
-      <div class="metric"><b>Rank 06+</b><i data-count="{{ tracking.rank_low_count }}">0</i></div>
-    </section>
+<div class="view">
+  <div class="topbar-line">
+    <h1>Top commenters</h1>
+    <p class="sub">Who is getting seen — and whose comments stay live.</p>
+  </div>
 
-    <section class="panel flush">
-      <h2>Leaderboard — {{ people | length }}</h2>
-      <div class="scroll">
-        <table data-sortable>
-          <thead><tr>
-            <th class="no idx">#</th><th>Operator</th><th class="num">Made</th>
-            <th class="num">Rank 01</th><th class="num">Age</th><th>Survival</th>
-          </tr></thead>
-          <tbody>
+  <div class="pc-filters">
+    <span class="pc-filter on">All keywords</span>
+    <span class="pc-filter">Lemonrealm</span>
+    <span class="pc-filter">PRv8sup</span>
+  </div>
+
+  {% set total_mentions = people | sum(attribute='mentions_total') %}
+  {% set total_live    = people | sum(attribute='live_count') %}
+  {% set total_gone    = people | sum(attribute='gone_count') %}
+  {% set total_made    = people | sum(attribute='comments_made') %}
+  {% set survival      = (total_live / total_made * 100) | round(0) | int if total_made else 0 %}
+  {% set dead_pct      = (total_gone / total_made * 100) | round(1) if total_made else 0 %}
+
+  <section class="tc-counters">
+    <div class="tc-card">
+      <div class="tc-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/></svg>
+        Tracked commenters
+      </div>
+      <div class="tc-val">{{ people | length }}</div>
+      <div class="tc-foot">registered operators</div>
+    </div>
+    <div class="tc-card">
+      <div class="tc-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Brand mentions
+      </div>
+      <div class="tc-val">{{ total_mentions }}</div>
+      <div class="tc-foot">lemonrealm + prv8sup</div>
+    </div>
+    <div class="tc-card">
+      <div class="tc-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>
+        Live comments
+      </div>
+      <div class="tc-val live">{{ total_live }}</div>
+      <div class="tc-foot" style="color:#22C55E">↑ {{ survival }}% survival</div>
+    </div>
+    <div class="tc-card">
+      <div class="tc-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2l10 18H2zM12 9v5M12 17.5v.5"/></svg>
+        Deleted comments
+      </div>
+      <div class="tc-val dead">{{ total_gone }}</div>
+      <div class="tc-foot" style="color:#EF4444">↑ {{ dead_pct }}% of mentions</div>
+    </div>
+  </section>
+
+  <section class="rt-panel">
+    <div class="rt-panel-head">
+      <h2>Commenter leaderboard</h2>
+      <span class="rt-hint">Sorted by total mentions</span>
+    </div>
+    <div class="rt-panel-body rt-flush">
+      {% if people %}
+      <div class="tc-note">
+        <b>ⓘ</b> Leaderboard place shows who wrote the most comments. Comment position shows where their live comments appear within posts.
+      </div>
+      <table class="rt-table">
+        <thead>
+          <tr>
+            <th style="width:60px">Place</th>
+            <th>Commenter</th>
+            <th colspan="3" style="text-align:center;border-bottom:1px solid #232A36">Mentions</th>
+            <th colspan="4" style="text-align:center;border-bottom:1px solid #232A36">Live comment positions</th>
+            <th colspan="2" style="text-align:center;border-bottom:1px solid #232A36">Status</th>
+          </tr>
+          <tr>
+            <th></th>
+            <th></th>
+            <th style="text-align:center">Lemonrealm</th>
+            <th style="text-align:center">PRv8sup</th>
+            <th style="text-align:center">Total</th>
+            <th style="text-align:center">🥇 #1</th>
+            <th style="text-align:center">🥈 #2</th>
+            <th style="text-align:center">🥉 #3</th>
+            <th style="text-align:center">Other</th>
+            <th style="text-align:center">Live</th>
+            <th style="text-align:center">Deleted</th>
+          </tr>
+        </thead>
+        <tbody>
           {% for p in people %}
-            <tr>
-              <td class="idx">{{ '%02d' % loop.index }}</td>
-              <td>
-                <span style="display:inline-flex;align-items:center;gap:9px">
-                  <img class="av" src="{{ p.avatar }}" alt="" loading="lazy">
-                  <span class="mono">{{ p.username }}</span>
-                </span>
-              </td>
-              <td class="num">{{ p.comments_made }}</td>
-              <td class="num" style="color:var(--green)">{{ p.rank_1_hits }}</td>
-              <td class="num faint">{% if p.account_age_days %}{{ p.account_age_days }}d{% else %}—{% endif %}</td>
-              <td>
-                <div class="meter">
-                  <div class="bar {{ 'ok' if p.survival_rate >= 80 else ('bad' if p.survival_rate < 50 else '') }}">
-                    <i style="width:{{ p.survival_rate }}%"></i>
-                  </div>
-                  <b>{{ p.survival_rate }}%</b>
-                </div>
-              </td>
-            </tr>
-          {% else %}
-            <tr><td colspan="6" class="empty">
-              <strong>NO OPERATORS</strong>
-              Stats appear once comments are registered.
-            </td></tr>
+          <tr>
+            <td class="tc-place">{{ '%02d' % loop.index }}</td>
+            <td>
+              <div class="tc-user">
+                <img class="tc-av" src="{{ p.avatar }}" alt="" loading="lazy">
+                <span>u/{{ p.username }}</span>
+              </div>
+            </td>
+            <td class="tc-num">{{ p.mentions_lemonrealm }}</td>
+            <td class="tc-num">{{ p.mentions_prv8sup }}</td>
+            <td class="tc-num tc-bold">{{ p.mentions_total }}</td>
+            <td class="tc-num">{{ p.rank_1 }}</td>
+            <td class="tc-num">{{ p.rank_2 }}</td>
+            <td class="tc-num">{{ p.rank_3 }}</td>
+            <td class="tc-num">{{ p.rank_other }}</td>
+            <td class="tc-num"><span class="tc-pill live">{{ p.live_count }}</span></td>
+            <td class="tc-num"><span class="tc-pill dead">{{ p.gone_count }}</span></td>
+          </tr>
           {% endfor %}
-          </tbody>
-        </table>
+        </tbody>
+      </table>
+      {% else %}
+      <div class="rt-empty">
+        <b>No tracked commenters yet</b>
+        Register comments on the <a href="{{ url_for('watch') }}" style="color:#F97316">Tracked posts</a> page and they will appear here.
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <div class="tc-duo">
+    <section class="rt-panel">
+      <div class="rt-panel-head"><h2>Live comment positions</h2></div>
+      <div class="rt-panel-body">
+        <p class="rt-hint" style="margin:0 0 14px">Where live comments from all tracked commenters appear (Best sort).</p>
+        {% set pos_total = (people | sum(attribute='rank_1')) + (people | sum(attribute='rank_2')) + (people | sum(attribute='rank_3')) + (people | sum(attribute='rank_other')) %}
+        {% if pos_total %}
+          {% for label, val, color in [
+              ('#1', people | sum(attribute='rank_1'), '#F97316'),
+              ('#2', people | sum(attribute='rank_2'), '#F97316'),
+              ('#3', people | sum(attribute='rank_3'), '#F97316'),
+              ('Other', people | sum(attribute='rank_other'), '#8B949E')
+          ] %}
+          <div class="tc-bar">
+            <span class="tc-bar-label">{{ label }}</span>
+            <div class="tc-bar-track"><i style="width:{{ (val / pos_total * 100) | round(0) if pos_total else 0 }}%;background:{{ color }}"></i></div>
+            <b class="tc-bar-num">{{ val }}</b>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="rt-hint">No position data yet.</p>
+        {% endif %}
       </div>
     </section>
 
-    <section class="panel">
-      <h2>Long-term telemetry</h2>
-      <div class="kv">
-        <div><s>Uptime days</s><i data-count="{{ longterm.days_running }}">0</i></div>
-        <div><s>Threads</s><i data-count="{{ longterm.total_posts_tracked }}">0</i></div>
-        <div><s>Comments</s><i data-count="{{ longterm.total_comments_tracked }}">0</i></div>
-        <div><s>Intakes</s><i data-count="{{ longterm.total_scrapes }}">0</i></div>
-        <div><s>Mean rank</s><i class="key">{{ longterm.avg_rank or '—' }}</i></div>
+    <section class="rt-panel">
+      <div class="rt-panel-head"><h2>Comment survival by keyword</h2></div>
+      <div class="rt-panel-body">
+        <p class="rt-hint" style="margin:0 0 14px">Live vs deleted comments for each keyword.</p>
+        {% set lem_live = people | sum(attribute='mentions_lemonrealm') %}
+        {% set prv_live = people | sum(attribute='mentions_prv8sup') %}
+        {% if lem_live or prv_live %}
+          <div class="tc-kw">
+            <span class="tc-kw-name">Lemonrealm</span>
+            <div class="tc-kw-track"><i class="live" style="width:{{ (lem_live / (lem_live + prv_live) * 100) | round(0) }}%"></i></div>
+            <span class="tc-kw-count">{{ lem_live }} mentions</span>
+          </div>
+          <div class="tc-kw">
+            <span class="tc-kw-name">PRv8sup</span>
+            <div class="tc-kw-track"><i class="warn" style="width:{{ (prv_live / (lem_live + prv_live) * 100) | round(0) }}%"></i></div>
+            <span class="tc-kw-count">{{ prv_live }} mentions</span>
+          </div>
+        {% else %}
+          <p class="rt-hint">No brand mentions recorded yet. Run a sweep from the Opportunities page.</p>
+        {% endif %}
       </div>
     </section>
   </div>
+</div>
 </main>
 </div>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
+
+<style>
+.topbar-line { margin-bottom: 12px; }
+.topbar-line h1 { margin: 0 0 4px; font-size: 26px; font-weight: 700; letter-spacing: -.01em; color: #E6EDF3; }
+.topbar-line .sub { color: #8B949E; font-size: 13px; margin: 0; }
+
+.pc-filters { display: flex; gap: 8px; margin-bottom: 16px; }
+.pc-filter { padding: 6px 14px; border-radius: 20px; background: #161B22; border: 1px solid #232A36; color: #8B949E; font-size: 12px; font-family: ui-monospace, monospace; cursor: default; }
+.pc-filter.on { background: rgba(249,115,22,.14); border-color: rgba(249,115,22,.4); color: #F97316; }
+
+.tc-counters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 22px; }
+@media (max-width: 900px) { .tc-counters { grid-template-columns: repeat(2, 1fr); } }
+.tc-card { background: #161B22; border: 1px solid #232A36; border-radius: 12px; padding: 16px 18px; }
+.tc-head { display: flex; align-items: center; gap: 9px; color: #8B949E; font-size: 12px; margin-bottom: 10px; }
+.tc-head svg { width: 16px; height: 16px; stroke: #F97316; }
+.tc-val { font-size: 30px; font-weight: 700; letter-spacing: -.02em; font-family: ui-monospace, monospace; color: #E6EDF3; }
+.tc-val.live { color: #22C55E; }
+.tc-val.dead { color: #EF4444; }
+.tc-foot { margin-top: 6px; font-size: 11px; color: #8B949E; font-family: ui-monospace, monospace; }
+
+.rt-panel { background: #161B22; border: 1px solid #232A36; border-radius: 12px; margin-bottom: 18px; overflow: hidden; }
+.rt-panel-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #232A36; }
+.rt-panel-head h2 { margin: 0; font-size: 16px; font-weight: 700; color: #E6EDF3; }
+.rt-panel-body { padding: 18px; }
+.rt-panel-body.rt-flush { padding: 0; }
+.rt-hint { color: #8B949E; font-size: 12px; font-family: ui-monospace, monospace; }
+
+.tc-note { padding: 11px 18px; background: rgba(249,115,22,.06); border-bottom: 1px solid #232A36; color: #FBBF24; font-size: 12px; }
+.tc-note b { color: #F97316; margin-right: 6px; }
+
+.rt-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rt-table th { text-align: left; padding: 10px 12px; color: #8B949E; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; border-bottom: 1px solid #232A36; }
+.rt-table td { padding: 10px 12px; border-bottom: 1px solid #232A36; color: #E6EDF3; }
+.rt-table tr:last-child td { border-bottom: 0; }
+.rt-table tr:hover td { background: #1C222C; }
+
+.tc-place { font-family: ui-monospace, monospace; color: #F97316; font-weight: 700; }
+.tc-user { display: flex; align-items: center; gap: 10px; }
+.tc-av { width: 26px; height: 26px; border-radius: 50%; background: #232A36; }
+.tc-user span { color: #E6EDF3; font-weight: 500; }
+.tc-num { text-align: center; font-family: ui-monospace, monospace; font-size: 13px; color: #8B949E; }
+.tc-bold { color: #E6EDF3; font-weight: 700; }
+.tc-pill { padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+.tc-pill.live { background: rgba(34,197,94,.12); color: #22C55E; }
+.tc-pill.dead { background: rgba(239,68,68,.12); color: #EF4444; }
+
+.tc-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 1000px) { .tc-duo { grid-template-columns: 1fr; } }
+
+.tc-bar { display: grid; grid-template-columns: 50px 1fr 50px; gap: 12px; align-items: center; padding: 7px 0; }
+.tc-bar-label { font-family: ui-monospace, monospace; color: #8B949E; font-size: 12px; }
+.tc-bar-track { height: 8px; background: #232A36; border-radius: 4px; overflow: hidden; }
+.tc-bar-track i { display: block; height: 100%; border-radius: 4px; }
+.tc-bar-num { font-family: ui-monospace, monospace; color: #E6EDF3; font-size: 12px; text-align: right; }
+
+.tc-kw { display: grid; grid-template-columns: 110px 1fr 110px; gap: 12px; align-items: center; padding: 8px 0; }
+.tc-kw-name { font-size: 13px; color: #E6EDF3; }
+.tc-kw-track { height: 10px; background: #232A36; border-radius: 5px; overflow: hidden; }
+.tc-kw-track i { display: block; height: 100%; }
+.tc-kw-track i.live { background: #22C55E; }
+.tc-kw-track i.warn { background: #F97316; }
+.tc-kw-count { font-family: ui-monospace, monospace; font-size: 12px; color: #8B949E; text-align: right; }
+
+.rt-empty { text-align: center; padding: 40px 20px; color: #8B949E; font-size: 13px; }
+.rt-empty b { display: block; font-size: 15px; color: #E6EDF3; margin-bottom: 6px; }
+</style>
 </body>
 </html>
