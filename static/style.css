@@ -892,3 +892,161 @@ main.main .view {
 }
 
 .hp-link:hover { color: #FF7A33 !important; }
+
+/* =====================================================================
+   RedTrak — mobile responsive (added last, wins on cascade)
+   ===================================================================== */
+
+/* Tablet and below */
+@media (max-width: 1024px) {
+  .shell {
+    grid-template-columns: 1fr !important;
+  }
+
+  .rail {
+    position: static !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    padding: 16px 20px !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid #1F242D !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 12px !important;
+    overflow-x: auto !important;
+  }
+
+  .rail .logo {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 0 16px 0 0 !important;
+    margin: 0 !important;
+    white-space: nowrap !important;
+  }
+
+  .rail .logo svg { width: 26px !important; height: 26px !important; }
+  .rail .logo b { font-size: 17px !important; }
+
+  .rail nav {
+    flex-direction: row !important;
+    gap: 4px !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+  }
+
+  .rail nav a {
+    padding: 8px 12px !important;
+    white-space: nowrap !important;
+    font-size: 13px !important;
+  }
+
+  .rail nav a span { display: inline !important; }
+
+  .user-block {
+    margin-left: auto !important;
+    margin-top: 0 !important;
+    border-top: 0 !important;
+    padding-top: 0 !important;
+    flex-shrink: 0 !important;
+  }
+
+  .user-btn { padding: 6px 10px !important; }
+  .user-name { display: none !important; }
+  .user-caret { display: none !important; }
+
+  .main, main.main {
+    padding: 20px 20px 60px !important;
+  }
+
+  .ov-counters,
+  .ov-grid,
+  .home-panels {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
+  }
+}
+
+/* Phone */
+@media (max-width: 640px) {
+  .rail {
+    padding: 12px 14px !important;
+    gap: 8px !important;
+  }
+
+  .rail nav a span { display: none !important; }
+  .rail nav a { padding: 8px 10px !important; }
+  .rail .logo b { display: none !important; }
+
+  .main, main.main {
+    padding: 16px 14px 60px !important;
+  }
+
+  .ov-topbar,
+  .topbar-line {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+
+  .ov-topbar h1,
+  .topbar-line h1 {
+    font-size: 22px !important;
+    white-space: normal !important;
+  }
+
+  .ov-counters,
+  .ov-grid,
+  .home-panels,
+  .subs-counters,
+  .tc-counters,
+  .del-counters,
+  .hc-counters {
+    grid-template-columns: 1fr !important;
+  }
+
+  .ov-val { font-size: 26px !important; }
+
+  .rt-table,
+  table {
+    font-size: 12px !important;
+  }
+
+  .rt-table th,
+  .rt-table td {
+    padding: 8px 10px !important;
+  }
+
+  /* scroll wide tables horizontally */
+  .rt-panel-body.rt-flush,
+  .scroll {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .post-grid,
+  .cards {
+    grid-template-columns: 1fr !important;
+  }
+
+  .chip-brand {
+    font-size: 11px !important;
+    padding: 5px 10px !important;
+  }
+
+  .ov-chip-btn {
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+  }
+
+  .rt-panel-head {
+    padding: 12px 14px !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .rt-panel-head h2 { font-size: 15px !important; }
+}
