@@ -1,63 +1,154 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-<head>{% include "_head.html" %}<title>Nodes — RedTrak</title></head>
+<head>{% include "_head.html" %}<title>Red zone — RedTrak</title></head>
 <body>
 <div class="shell">
 {% set nav = 'subs' %}
-{% set page_title = 'Nodes' %}
-{% set page_slug = 'nodes' %}
-{% set page_sub = 'survival rate per community' %}
+{% set page_title = 'Red zone' %}
+{% set page_slug = 'subs' %}
+{% set page_sub = 'where your brand survives' %}
 {% include "_shell.html" %}
 
-  <div class="view">
-    <section class="panel flush">
-      <h2>Node scorecard — {{ table | length }}</h2>
-      <div class="scroll">
-        <table data-sortable>
-          <thead><tr>
-            <th class="no idx">#</th><th>Node</th><th class="num">Posted</th>
-            <th class="num">Lost</th><th>Survival</th><th>Verdict</th>
-          </tr></thead>
-          <tbody>
-          {% for s in table %}
-            <tr>
-              <td class="idx">{{ '%02d' % loop.index }}</td>
-              <td class="mono">r/{{ s.sub }}
-                {% if s.flagged %}<span class="tag-pill bad">blacklisted</span>{% endif %}
-              </td>
-              <td class="num faint">{{ s.total }}</td>
-              <td class="num" style="color:{{ 'var(--red)' if s.gone else 'var(--faint)' }}">{{ s.gone }}</td>
-              <td>
-                <div class="meter">
-                  <div class="bar {{ 'ok' if s.tone == 'good' else ('bad' if s.tone == 'bad' else '') }}">
-                    <i style="width:{{ s.rate }}%"></i>
-                  </div>
-                  <b>{{ s.rate }}%</b>
-                </div>
-              </td>
-              <td>
-                <span class="tag-pill {{ 'ok' if s.tone == 'good' else ('bad' if s.tone == 'bad' else ('warn' if s.tone == 'warn' else '')) }}">{{ s.verdict }}</span>
-              </td>
-            </tr>
-          {% else %}
-            <tr><td colspan="6" class="empty">
-              <strong>NO NODES</strong>
-              Register comments under Targets and verify them.
-            </td></tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <div class="notice">
-      <p><b>How verdicts work.</b> Survival is comments still live divided by comments
-         posted, per node. Under <b>{{ minimum }}</b> data points the verdict reads
-         <b>too few to judge</b> — one removal out of two is noise, not a pattern.</p>
-    </div>
+<div class="view">
+  <div class="topbar-line">
+    <h1>Red zone</h1>
+    <p class="sub">Subreddits ranked by your comment survival rate. Green = friendly, red = hostile.</p>
   </div>
+
+  {% set friendly_count = table | selectattr('tone', 'equalto', 'good') | list | length %}
+  {% set hostile_count  = table | selectattr('tone', 'equalto', 'bad')  | list | length %}
+
+  <section class="subs-counters">
+    <div class="sc-card">
+      <div class="sc-head">Total subreddits</div>
+      <div class="sc-val">{{ table | length }}</div>
+      <div class="sc-foot">with measured activity</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-head">Friendly</div>
+      <div class="sc-val live">{{ friendly_count }}</div>
+      <div class="sc-foot">survival ≥ 75%</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-head">Hostile</div>
+      <div class="sc-val dead">{{ hostile_count }}</div>
+      <div class="sc-foot">survival &lt; 50%</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-head">Min sample</div>
+      <div class="sc-val">{{ minimum }}</div>
+      <div class="sc-foot">comments needed to judge</div>
+    </div>
+  </section>
+
+  <section class="rt-panel">
+    <div class="rt-panel-head">
+      <h2>Subreddit verdicts</h2>
+      <span class="rt-hint">{{ table | length }} nodes measured</span>
+    </div>
+    <div class="rt-panel-body rt-flush">
+      {% if table %}
+      <table class="rt-table">
+        <thead>
+          <tr>
+            <th style="width:36px">#</th>
+            <th>Subreddit</th>
+            <th style="width:100px;text-align:right">Total</th>
+            <th style="width:100px;text-align:right">Survived</th>
+            <th style="width:100px;text-align:right">Gone</th>
+            <th style="width:220px">Survival rate</th>
+            <th style="width:140px">Verdict</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in table %}
+          <tr>
+            <td class="rt-idx">{{ '%02d' % loop.index }}</td>
+            <td>
+              <span class="rt-mono">r/{{ r.sub }}</span>
+              {% if r.flagged %}<span class="rt-pill bad" style="margin-left:8px">FLAGGED</span>{% endif %}
+            </td>
+            <td class="rt-faint" style="text-align:right">{{ r.total }}</td>
+            <td style="text-align:right;color:#22C55E;font-family:ui-monospace,monospace">{{ r.survived }}</td>
+            <td style="text-align:right;color:#EF4444;font-family:ui-monospace,monospace">{{ r.gone }}</td>
+            <td>
+              <div class="rt-rate">
+                <div class="rt-rate-bar">
+                  <i style="width:{{ r.rate }}%;background:
+                    {% if r.tone == 'good' %}#22C55E
+                    {% elif r.tone == 'warn' %}#FBBF24
+                    {% elif r.tone == 'bad' %}#EF4444
+                    {% else %}#8B949E{% endif %}"></i>
+                </div>
+                <span class="rt-rate-pct">{{ r.rate }}%</span>
+              </div>
+            </td>
+            <td>
+              <span class="rt-verdict {{ r.tone }}">{{ r.verdict }}</span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="rt-empty">
+        <b>No subreddits measured yet</b>
+        Register a comment on the <a href="{{ url_for('watch') }}" style="color:#F97316">Tracked posts</a> page, then check back.
+      </div>
+      {% endif %}
+    </div>
+  </section>
+</div>
 </main>
 </div>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
+
+<style>
+.topbar-line { margin-bottom: 12px; }
+.topbar-line h1 { margin: 0 0 4px; font-size: 26px; font-weight: 700; letter-spacing: -.01em; color: #E6EDF3; }
+.topbar-line .sub { color: #8B949E; font-size: 13px; margin: 0; }
+
+.subs-counters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 22px; }
+@media (max-width: 900px) { .subs-counters { grid-template-columns: repeat(2, 1fr); } }
+.sc-card { background: #161B22; border: 1px solid #232A36; border-radius: 12px; padding: 16px 18px; }
+.sc-head { display: flex; align-items: center; gap: 9px; color: #8B949E; font-size: 12px; margin-bottom: 10px; font-family: ui-monospace, monospace; text-transform: uppercase; letter-spacing: .08em; }
+.sc-val { font-size: 30px; font-weight: 700; letter-spacing: -.02em; font-family: ui-monospace, monospace; color: #E6EDF3; }
+.sc-val.live { color: #22C55E; }
+.sc-val.dead { color: #EF4444; }
+.sc-foot { margin-top: 6px; font-size: 11px; color: #8B949E; font-family: ui-monospace, monospace; }
+
+.rt-panel { background: #161B22; border: 1px solid #232A36; border-radius: 12px; margin-bottom: 18px; overflow: hidden; }
+.rt-panel-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #232A36; }
+.rt-panel-head h2 { margin: 0; font-size: 16px; font-weight: 700; color: #E6EDF3; }
+.rt-panel-body.rt-flush { padding: 0; }
+.rt-hint { color: #8B949E; font-size: 12px; font-family: ui-monospace, monospace; }
+
+.rt-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rt-table th { text-align: left; padding: 11px 18px; color: #8B949E; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; border-bottom: 1px solid #232A36; }
+.rt-table td { padding: 12px 18px; border-bottom: 1px solid #232A36; color: #E6EDF3; }
+.rt-table tr:last-child td { border-bottom: 0; }
+.rt-table tr:hover td { background: #1C222C; }
+
+.rt-idx { font-family: ui-monospace, monospace; color: #8B949E; font-size: 12px; }
+.rt-mono { font-family: ui-monospace, monospace; color: #F97316; }
+.rt-faint { color: #8B949E; font-size: 12px; font-family: ui-monospace, monospace; }
+
+.rt-rate { display: flex; align-items: center; gap: 10px; }
+.rt-rate-bar { flex: 1; height: 4px; background: #232A36; border-radius: 2px; overflow: hidden; }
+.rt-rate-bar i { display: block; height: 100%; border-radius: 2px; }
+.rt-rate-pct { font-family: ui-monospace, monospace; font-size: 12px; color: #E6EDF3; min-width: 40px; text-align: right; }
+
+.rt-verdict { font-size: 11px; font-family: ui-monospace, monospace; font-weight: 600; padding: 4px 10px; border-radius: 12px; white-space: nowrap; }
+.rt-verdict.good { background: rgba(34,197,94,.12); color: #22C55E; }
+.rt-verdict.warn { background: rgba(251,191,36,.14); color: #FBBF24; }
+.rt-verdict.bad  { background: rgba(239,68,68,.12); color: #EF4444; }
+.rt-verdict.dim  { background: rgba(139,148,158,.12); color: #8B949E; }
+
+.rt-pill { padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; font-family: ui-monospace, monospace; }
+.rt-pill.bad { background: rgba(239,68,68,.12); color: #EF4444; }
+
+.rt-empty { text-align: center; padding: 40px 20px; color: #8B949E; font-size: 13px; }
+.rt-empty b { display: block; font-size: 15px; color: #E6EDF3; margin-bottom: 6px; }
+</style>
 </body>
 </html>
