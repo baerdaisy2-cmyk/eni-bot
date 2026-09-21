@@ -6,15 +6,15 @@
 :root{
   /* --- surfaces ---------------------------------------------------------- */
   --bg:#0D1117;          /* page background, deepest layer                    */
-  --bg-2:#0B0F19;        /* gradient partner for the page background          */
-  --panel:#161B22;       /* card and panel fill                               */
+  --bg-2:#0C0E12;        /* gradient partner for the page background          */
+  --panel:#12151B;       /* card and panel fill                               */
   --panel-2:#1C2128;     /* raised rows, inputs, hover fills                  */
-  --line:#30363D;        /* default border                                    */
+  --line:#1F242D;        /* default border                                    */
   --line-2:#3D454F;      /* stronger border, hover state                      */
 
   /* --- text -------------------------------------------------------------- */
   --text:#E6EDF3;        /* primary copy                                      */
-  --muted:#8B949E;       /* secondary copy, labels                            */
+  --muted:#8A92A6;       /* secondary copy, labels                            */
   --faint:#5A6572;       /* tertiary, timestamps, hints                       */
 
   /* --- accents ----------------------------------------------------------- */
@@ -45,7 +45,7 @@
 /* light mode kept as an escape hatch; the platform is designed dark */
 [data-theme="light"]{
   --bg:#F4F6F8;--bg-2:#EDF0F3;--panel:#FFFFFF;--panel-2:#F2F4F7;
-  --line:#D8DEE4;--line-2:#C2CAD3;--text:#0D1117;--muted:#5A6572;--faint:#8B949E;
+  --line:#D8DEE4;--line-2:#C2CAD3;--text:#0D1117;--muted:#5A6572;--faint:#8A92A6;
   --green:#00A344;--cyan:#0088A8;--amber:#B57800;
 }
 
@@ -542,3 +542,92 @@ details[open] summary::before{content:"[-] "}
   border:1px solid var(--line);border-radius:var(--r);cursor:pointer;flex-shrink:0}
 .burger svg{width:16px;height:16px;stroke:var(--text);fill:none;stroke-width:1.7}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+
+/* --- RedTrak sidebar overrides (matches realm/radar prototype) --- */
+.rail {
+  width: 220px !important;
+  background: #0C0E12 !important;
+  border-right: 1px solid #1F242D !important;
+  padding: 20px 14px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+.rail .logo {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+  padding: 4px 8px 20px !important;
+  border-bottom: 0 !important;
+  text-decoration: none !important;
+}
+
+.rail .logo b {
+  font-size: 17px !important;
+  font-weight: 800 !important;
+  color: #FFFFFF !important;
+  letter-spacing: -.02em !important;
+  font-family: 'Inter', system-ui, sans-serif !important;
+}
+
+.rail .logo b em {
+  color: #FF5500 !important;
+  font-style: normal !important;
+  font-weight: 700 !important;
+  padding: 0 2px !important;
+}
+
+.rail nav {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  margin-top: 6px !important;
+}
+
+.rail nav a {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 10px 12px !important;
+  border-radius: 10px !important;
+  color: #8A92A6 !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  text-decoration: none !important;
+  transition: background .12s ease, color .12s ease !important;
+  position: relative !important;
+}
+
+.rail nav a svg {
+  width: 18px !important;
+  height: 18px !important;
+  stroke: currentColor !important;
+  fill: none !important;
+  flex: 0 0 18px !important;
+}
+
+.rail nav a:hover {
+  background: #12151B !important;
+  color: #FFFFFF !important;
+}
+
+.rail nav a.on {
+  background: #2B1710 !important;
+  color: #FF5500 !important;
+  font-weight: 600 !important;
+}
+
+.rail nav a.on::before {
+  display: none !important;
+}
+
+.rail nav a.on svg {
+  stroke: #FF5500 !important;
+}
+
+/* kill the old secondary "System" section if any of its markup remains */
+.rail .rail-label { display: none !important; }
+.rail .rail-foot { display: none !important; }

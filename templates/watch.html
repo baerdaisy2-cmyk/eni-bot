@@ -135,48 +135,48 @@
 <style>
 .topbar-line { margin-bottom: 12px; }
 .topbar-line h1 { margin: 0 0 4px; font-size: 26px; font-weight: 700; letter-spacing: -.01em; color: #E6EDF3; }
-.topbar-line .sub { color: #8B949E; font-size: 13px; margin: 0; }
+.topbar-line .sub { color: #8A92A6; font-size: 13px; margin: 0; }
 
-.rt-notice { padding: 10px 14px; border-radius: 8px; border: 1px solid #232A36; font-size: 13px; margin-bottom: 16px; color: #E6EDF3; }
+.rt-notice { padding: 10px 14px; border-radius: 8px; border: 1px solid #1F242D; font-size: 13px; margin-bottom: 16px; color: #E6EDF3; }
 .rt-notice.warn { background: rgba(251,191,36,.08); border-color: rgba(251,191,36,.3); }
-.rt-notice a { color: #F97316; margin-left: 8px; }
+.rt-notice a { color: #FF5500; margin-left: 8px; }
 
-.rt-panel { background: #161B22; border: 1px solid #232A36; border-radius: 12px; margin-bottom: 18px; overflow: hidden; }
-.rt-panel-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #232A36; }
+.rt-panel { background: #12151B; border: 1px solid #1F242D; border-radius: 12px; margin-bottom: 18px; overflow: hidden; }
+.rt-panel-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #1F242D; }
 .rt-panel-head h2 { margin: 0; font-size: 16px; font-weight: 700; color: #E6EDF3; }
 .rt-panel-body { padding: 18px; }
 .rt-panel-body.rt-flush { padding: 0; }
-.rt-hint { color: #8B949E; font-size: 12px; font-family: ui-monospace, "JetBrains Mono", monospace; }
+.rt-hint { color: #8A92A6; font-size: 12px; font-family: ui-monospace, "JetBrains Mono", monospace; }
 
-.rt-label { display: block; font-size: 12px; color: #8B949E; margin-bottom: 6px; font-family: ui-monospace, monospace; text-transform: uppercase; letter-spacing: .1em; }
-.rt-input { width: 100%; padding: 10px 12px; border-radius: 8px; background: #0B0F19; border: 1px solid #232A36; color: #E6EDF3; font: inherit; font-size: 13px; }
-.rt-input:focus { outline: none; border-color: #F97316; }
+.rt-label { display: block; font-size: 12px; color: #8A92A6; margin-bottom: 6px; font-family: ui-monospace, monospace; text-transform: uppercase; letter-spacing: .1em; }
+.rt-input { width: 100%; padding: 10px 12px; border-radius: 8px; background: #0C0E12; border: 1px solid #1F242D; color: #E6EDF3; font: inherit; font-size: 13px; }
+.rt-input:focus { outline: none; border-color: #FF5500; }
 .rt-textarea { resize: vertical; min-height: 80px; font-family: ui-monospace, monospace; font-size: 12.5px; }
 
 .rt-actions { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
-.rt-btn { padding: 9px 16px; border-radius: 8px; border: 1px solid #232A36; background: #1C222C; color: #E6EDF3; font: inherit; font-size: 13px; cursor: pointer; }
-.rt-btn.primary { background: #F97316; border-color: #F97316; color: #0B0F19; font-weight: 600; }
-.rt-btn.primary:hover { background: #FB923C; border-color: #FB923C; }
+.rt-btn { padding: 9px 16px; border-radius: 8px; border: 1px solid #1F242D; background: #161920; color: #E6EDF3; font: inherit; font-size: 13px; cursor: pointer; }
+.rt-btn.primary { background: #FF5500; border-color: #FF5500; color: #0C0E12; font-weight: 600; }
+.rt-btn.primary:hover { background: #FF7A33; border-color: #FF7A33; }
 
 .rt-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.rt-chip { padding: 7px 12px; border-radius: 20px; background: rgba(249,115,22,.10); color: #FB923C; font-size: 12px; font-family: ui-monospace, monospace; text-decoration: none; border: 1px solid rgba(249,115,22,.2); }
+.rt-chip { padding: 7px 12px; border-radius: 20px; background: #2B1710; color: #FF7A33; font-size: 12px; font-family: ui-monospace, monospace; text-decoration: none; border: 1px solid #522415; }
 .rt-chip:hover { background: rgba(249,115,22,.18); }
 
 .rt-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.rt-table th { text-align: left; padding: 11px 18px; color: #8B949E; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; border-bottom: 1px solid #232A36; }
-.rt-table td { padding: 12px 18px; border-bottom: 1px solid #232A36; color: #E6EDF3; }
+.rt-table th { text-align: left; padding: 11px 18px; color: #8A92A6; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; border-bottom: 1px solid #1F242D; }
+.rt-table td { padding: 12px 18px; border-bottom: 1px solid #1F242D; color: #E6EDF3; }
 .rt-table tr:last-child td { border-bottom: 0; }
-.rt-table tr:hover td { background: #1C222C; }
+.rt-table tr:hover td { background: #161920; }
 .rt-table a { color: #E6EDF3; text-decoration: none; }
-.rt-table a:hover { color: #F97316; }
+.rt-table a:hover { color: #FF5500; }
 
-.rt-idx { font-family: ui-monospace, monospace; color: #8B949E; font-size: 12px; }
-.rt-mono { font-family: ui-monospace, monospace; color: #F97316; }
-.rt-faint { color: #8B949E; font-size: 12px; }
+.rt-idx { font-family: ui-monospace, monospace; color: #8A92A6; font-size: 12px; }
+.rt-mono { font-family: ui-monospace, monospace; color: #FF5500; }
+.rt-faint { color: #8A92A6; font-size: 12px; }
 .rt-rowactions { text-align: right; }
 
-.rt-mini { padding: 5px 10px; border-radius: 6px; font-size: 11px; font-family: ui-monospace, monospace; font-weight: 600; border: 1px solid #232A36; background: #161B22; color: #8B949E; cursor: pointer; margin-left: 4px; }
-.rt-mini:hover { color: #E6EDF3; border-color: #30363D; }
+.rt-mini { padding: 5px 10px; border-radius: 6px; font-size: 11px; font-family: ui-monospace, monospace; font-weight: 600; border: 1px solid #1F242D; background: #12151B; color: #8A92A6; cursor: pointer; margin-left: 4px; }
+.rt-mini:hover { color: #E6EDF3; border-color: #1F242D; }
 .rt-mini.ok { color: #22C55E; border-color: rgba(34,197,94,.3); }
 .rt-mini.bad { color: #EF4444; border-color: rgba(239,68,68,.3); }
 
@@ -184,7 +184,7 @@
 .rt-pill.ok { background: rgba(34,197,94,.12); color: #22C55E; }
 .rt-pill.bad { background: rgba(239,68,68,.12); color: #EF4444; }
 
-.rt-empty { text-align: center; padding: 40px 20px; color: #8B949E; font-size: 13px; }
+.rt-empty { text-align: center; padding: 40px 20px; color: #8A92A6; font-size: 13px; }
 .rt-empty b { display: block; font-size: 15px; color: #E6EDF3; margin-bottom: 6px; }
 </style>
 </body>

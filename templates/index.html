@@ -10,16 +10,32 @@
 {% include "_shell.html" %}
 
 <div class="view">
-  <div class="topbar-line">
-    <h1>Reddit overview</h1>
-    <p class="sub">Keep an eye on every mention of lemonrealm and prv8sup.</p>
+
+  <div class="ov-topbar">
+    <div>
+      <h1>Reddit overview</h1>
+      <p class="sub">Keep an eye on every mention of lemonrealm and prv8sup.</p>
+    </div>
+    <div class="ov-topbar-right">
+      <button class="ov-chip-btn" type="button" disabled title="Coming soon">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        Sample data
+      </button>
+      <button class="ov-chip-btn" type="button" disabled title="Coming soon">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        Last 30 days
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:4px"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+    </div>
   </div>
 
   <div style="margin-bottom:14px">
-    <span class="chip chip-brand">Tracking: <b>lemonrealm</b> · <b>prv8sup</b></span>
+    <span class="chip-brand">
+      Tracking: <b>lemonrealm</b> · <b>prv8sup</b>
+    </span>
   </div>
 
-  <section class="overview-counters">
+  <section class="ov-counters">
     <div class="ov-card">
       <div class="ov-head">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -35,7 +51,7 @@
         Deleted comments
       </div>
       <div class="ov-val dead">{{ overview.deleted_comments }}</div>
-      <div class="ov-foot">{{ ((overview.deleted_comments / overview.keyword_comments * 100) if overview.keyword_comments else 0) | round(0) | int }}% of mentions</div>
+      <div class="ov-foot">{{ ((overview.deleted_comments / overview.keyword_comments * 100) if overview.keyword_comments else 0) | round(1) }}% of mentions</div>
     </div>
 
     <div class="ov-card">
@@ -58,16 +74,16 @@
   </section>
 
   <div class="ov-grid">
-    <section class="panel">
-      <div class="panel-head">
+    <section class="rt-panel">
+      <div class="rt-panel-head">
         <h2>Tracked posts</h2>
-        <div class="tabs">
+        <div class="rt-tabs">
           <a href="#" class="on">All posts</a>
           <a href="#">Active</a>
           <a href="#">Deleted</a>
         </div>
       </div>
-      <div class="panel-body">
+      <div class="rt-panel-body">
         {% if rows %}
           <div class="post-grid">
             {% for row in rows[:8] %}
@@ -95,7 +111,7 @@
             {% endfor %}
           </div>
         {% else %}
-          <div class="empty-state">
+          <div class="rt-empty">
             <b>No tracked posts yet</b>
             Comment on a thread, then <a href="{{ url_for('watch') }}">register the link</a>.
           </div>
@@ -104,9 +120,9 @@
     </section>
 
     <aside class="ov-side">
-      <section class="panel">
-        <div class="panel-head"><h2>Red zone</h2></div>
-        <div class="panel-body">
+      <section class="rt-panel">
+        <div class="rt-panel-head"><h2>Red zone</h2></div>
+        <div class="rt-panel-body">
           <p class="panel-sub">Subreddits with high removal rates</p>
           {% if overview.red_zone %}
             {% for z in overview.red_zone %}
@@ -117,30 +133,36 @@
             </div>
             {% endfor %}
           {% else %}
-            <p class="hint">No red-zone subs yet. Scrape more posts to see removal patterns.</p>
+            <p class="rt-hint">No red-zone subs yet. Scrape more posts to see removal patterns.</p>
           {% endif %}
         </div>
       </section>
 
-      <section class="panel">
-        <div class="panel-head"><h2>Comment visibility</h2></div>
-        <div class="panel-body">
+      <section class="rt-panel">
+        <div class="rt-panel-head"><h2>Comment visibility</h2></div>
+        <div class="rt-panel-body">
           <p class="panel-sub">Where lemonrealm and prv8sup mentions appear</p>
+          {% set top3 = overview.top3_comments or 0 %}
+          {% set deleted = overview.deleted_comments or 0 %}
+          {% set total = (top3 + deleted) if (top3 + deleted) > 0 else 1 %}
+          {% set top3_pct = (top3 / total * 100) | round(0) | int %}
+          {% set dead_pct = (deleted / total * 100) | round(0) | int %}
           <div class="donut">
             <svg viewBox="0 0 36 36" class="donut-svg">
-              <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--line)" stroke-width="3"/>
-              <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--live)" stroke-width="3"
-                      stroke-dasharray="{{ overview.top3_comments }} {{ 100 - overview.top3_comments }}"
-                      stroke-dashoffset="25"/>
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#1F242D" stroke-width="3"/>
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#22C55E" stroke-width="3"
+                      stroke-dasharray="{{ top3_pct }} 100" stroke-dashoffset="25"/>
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#EF4444" stroke-width="3"
+                      stroke-dasharray="{{ dead_pct }} 100" stroke-dashoffset="{{ 25 - top3_pct }}"/>
             </svg>
             <div class="donut-center">
-              <b>{{ overview.top3_comments }}</b>
+              <b>{{ top3 }}</b>
               <span>in top 3</span>
             </div>
           </div>
           <div class="donut-legend">
-            <div><i class="dot live"></i> Top 3 <b>{{ overview.top3_comments }}</b></div>
-            <div><i class="dot warn"></i> Deleted <b>{{ overview.deleted_comments }}</b></div>
+            <div><i class="dot live"></i> Top 3 <b>{{ top3 }}</b></div>
+            <div><i class="dot dead"></i> Deleted <b>{{ deleted }}</b></div>
           </div>
         </div>
       </section>
@@ -152,108 +174,94 @@
 <script src="{{ url_for('static', filename='app.js') }}"></script>
 
 <style>
-.overview-counters {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  margin-bottom: 22px;
-}
-@media (max-width: 900px) { .overview-counters { grid-template-columns: repeat(2, 1fr); } }
+.ov-topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 12px; flex-wrap: wrap; }
+.ov-topbar h1 { margin: 0 0 4px; font-size: 26px; font-weight: 700; letter-spacing: -.01em; color: #E6EDF3; }
+.ov-topbar .sub { color: #8A92A6; font-size: 13px; margin: 0; }
+.ov-topbar-right { display: flex; gap: 8px; align-items: center; }
 
-.ov-card {
-  background: var(--panel, #161B22);
-  border: 1px solid var(--line, #232A36);
-  border-radius: 12px;
-  padding: 16px 18px;
+.ov-chip-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 12px; border-radius: 12px;
+  background: #12151B; border: 1px solid #1F242D;
+  color: #8A92A6; font: inherit; font-size: 12px;
+  font-family: ui-monospace, monospace;
+  cursor: not-allowed; opacity: .75;
 }
-.ov-head {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  color: #8B949E;
-  font-size: 12px;
-  margin-bottom: 10px;
+.ov-chip-btn svg { stroke: #8A92A6; }
+
+.chip-brand {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 7px 14px; border-radius: 9999px;
+  background: #2B1710; border: 1px solid #522415;
+  font-size: 12px; color: #FFFFFF;
+  font-family: ui-monospace, monospace;
 }
-.ov-head svg { width: 16px; height: 16px; stroke: #F97316; }
-.ov-val {
-  font-size: 30px;
-  font-weight: 700;
-  letter-spacing: -.02em;
-  font-family: var(--mono, monospace);
-  color: #E6EDF3;
-}
+.chip-brand b { color: #FF5500; font-weight: 600; }
+
+.ov-counters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 22px; }
+@media (max-width: 900px) { .ov-counters { grid-template-columns: repeat(2, 1fr); } }
+
+.ov-card { background: #12151B; border: 1px solid #1F242D; border-radius: 12px; padding: 16px 18px; }
+.ov-head { display: flex; align-items: center; gap: 9px; color: #8A92A6; font-size: 12px; margin-bottom: 10px; }
+.ov-head svg { width: 16px; height: 16px; stroke: #FF5500; }
+.ov-val { font-size: 32px; font-weight: 700; letter-spacing: -.02em; font-family: 'Inter', system-ui, -apple-system, sans-serif; font-variant-numeric: tabular-nums; color: #FFFFFF; }
 .ov-val.live { color: #22C55E; }
 .ov-val.dead { color: #EF4444; }
-.ov-val.warn { color: #F97316; }
-.ov-foot { margin-top: 6px; font-size: 11px; color: #8B949E; font-family: var(--mono, monospace); }
+.ov-val.warn { color: #FF5500; }
+.ov-foot { margin-top: 6px; font-size: 11px; color: #8A92A6; font-family: ui-monospace, monospace; }
 
-.ov-grid {
-  display: grid;
-  grid-template-columns: 1fr 340px;
-  gap: 22px;
-}
+.ov-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
 @media (max-width: 1100px) { .ov-grid { grid-template-columns: 1fr; } }
+.ov-side { display: flex; flex-direction: column; gap: 16px; }
 
-.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line, #232A36); }
-.panel-head h2 { margin: 0; font-size: 16px; font-weight: 700; }
-.panel-sub { color: #8B949E; font-size: 12px; margin: 0 0 12px; }
-.panel-body { padding: 18px; }
+.rt-panel { background: #12151B; border: 1px solid #1F242D; border-radius: 12px; overflow: hidden; margin-bottom: 18px; }
+.rt-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid #1F242D; }
+.rt-panel-head h2 { margin: 0; font-size: 16px; font-weight: 700; color: #E6EDF3; }
+.rt-panel-body { padding: 18px; }
+.rt-hint { color: #8A92A6; font-size: 12px; font-family: ui-monospace, monospace; }
+.panel-sub { color: #8A92A6; font-size: 12px; margin: 0 0 12px; }
 
-.tabs { display: flex; gap: 4px; }
-.tabs a { padding: 6px 10px; border-radius: 6px; color: #8B949E; font-size: 12px; font-family: var(--mono, monospace); }
-.tabs a.on { background: rgba(249,115,22,.15); color: #F97316; }
+.rt-tabs { display: flex; gap: 4px; }
+.rt-tabs a { padding: 6px 10px; border-radius: 6px; color: #8A92A6; font-size: 12px; font-family: ui-monospace, monospace; text-decoration: none; }
+.rt-tabs a.on { background: #2B1710; color: #FF5500; }
 
-.post-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.post-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 900px) { .post-grid { grid-template-columns: 1fr; } }
-
-.post-card {
-  background: #1C222C;
-  border: 1px solid var(--line, #232A36);
-  border-radius: 8px;
-  padding: 14px 16px;
-}
-.pc-top { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #8B949E; font-family: var(--mono, monospace); margin-bottom: 8px; }
-.pc-sub { color: #F97316; font-weight: 600; font-family: var(--sans, sans-serif); }
+.post-card { background: #161920; border: 1px solid #1F242D; border-radius: 12px; padding: 14px 16px; }
+.pc-top { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #8A92A6; font-family: ui-monospace, monospace; margin-bottom: 8px; }
+.pc-sub { color: #FF5500; font-weight: 600; font-family: inherit; }
 .badge { margin-left: auto; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
 .badge.live { background: rgba(34,197,94,.12); color: #22C55E; }
 .badge.dead { background: rgba(239,68,68,.12); color: #EF4444; }
 .pc-title { margin: 4px 0 8px; font-size: 14.5px; font-weight: 600; line-height: 1.35; }
-.pc-title a { color: #E6EDF3; }
-.pc-snippet { font-size: 12px; color: #8B949E; line-height: 1.5; margin-bottom: 10px; }
-.pc-stats { display: flex; gap: 16px; font-size: 12px; color: #8B949E; font-family: var(--mono, monospace); }
+.pc-title a { color: #E6EDF3; text-decoration: none; }
+.pc-title a:hover { color: #FF5500; }
+.pc-snippet { font-size: 12px; color: #8A92A6; line-height: 1.5; margin-bottom: 10px; }
+.pc-stats { display: flex; gap: 16px; font-size: 12px; color: #8A92A6; font-family: ui-monospace, monospace; }
 .pc-stats b { color: #E6EDF3; }
 
-.ov-side { display: flex; flex-direction: column; gap: 18px; }
-
-.zone-row { display: grid; grid-template-columns: 140px 1fr 50px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line, #232A36); }
+.zone-row { display: grid; grid-template-columns: 130px 1fr 50px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #1F242D; }
 .zone-row:last-child { border-bottom: 0; }
-.zone-sub { font-size: 13px; font-family: var(--mono, monospace); color: #E6EDF3; }
-.zone-bar { height: 4px; background: #232A36; border-radius: 2px; overflow: hidden; }
+.zone-sub { font-size: 12.5px; font-family: ui-monospace, monospace; color: #E6EDF3; }
+.zone-bar { height: 4px; background: #1F242D; border-radius: 2px; overflow: hidden; }
 .zone-bar i { display: block; height: 100%; background: #EF4444; }
-.zone-pct { color: #EF4444; font-family: var(--mono, monospace); font-size: 12px; text-align: right; }
+.zone-pct { color: #EF4444; font-family: ui-monospace, monospace; font-size: 12px; text-align: right; }
 
 .donut { position: relative; display: flex; justify-content: center; margin-bottom: 14px; }
 .donut-svg { width: 130px; height: 130px; transform: rotate(-90deg); }
 .donut-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
-.donut-center b { display: block; font-size: 24px; font-weight: 700; color: #E6EDF3; font-family: var(--mono, monospace); }
-.donut-center span { font-size: 11px; color: #8B949E; }
+.donut-center b { display: block; font-size: 24px; font-weight: 700; color: #E6EDF3; font-family: ui-monospace, monospace; }
+.donut-center span { font-size: 11px; color: #8A92A6; }
 .donut-legend { display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
-.donut-legend div { display: flex; align-items: center; gap: 8px; color: #8B949E; }
-.donut-legend b { margin-left: auto; color: #E6EDF3; font-family: var(--mono, monospace); }
+.donut-legend div { display: flex; align-items: center; gap: 8px; color: #8A92A6; }
+.donut-legend b { margin-left: auto; color: #E6EDF3; font-family: ui-monospace, monospace; }
 .dot { width: 8px; height: 8px; border-radius: 50%; }
 .dot.live { background: #22C55E; }
-.dot.warn { background: #F97316; }
+.dot.dead { background: #EF4444; }
 
-.empty-state { text-align: center; padding: 40px 20px; color: #8B949E; font-size: 13px; }
-.empty-state b { display: block; font-size: 15px; margin-bottom: 6px; color: #E6EDF3; }
-.empty-state a { color: #F97316; }
-
-.topbar-line { margin-bottom: 12px; }
-.topbar-line h1 { margin: 0 0 4px; font-size: 26px; font-weight: 700; letter-spacing: -.01em; }
-.topbar-line .sub { color: #8B949E; font-size: 13px; margin: 0; }
-.chip-brand { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 20px; background: var(--panel, #161B22); border: 1px solid var(--line, #232A36); font-size: 12px; color: #8B949E; font-family: var(--mono, monospace); }
-.chip-brand b { color: #F97316; }
-.hint { color: #8B949E; font-size: 12px; }
+.rt-empty { text-align: center; padding: 40px 20px; color: #8A92A6; font-size: 13px; }
+.rt-empty b { display: block; font-size: 15px; color: #E6EDF3; margin-bottom: 6px; }
+.rt-empty a { color: #FF5500; }
 </style>
 </body>
 </html>
