@@ -11,3 +11,4 @@ scraper.py.bak-*
 *.bak-*
 templates.bak/
 rename-backup-*/
+.DS_Store
